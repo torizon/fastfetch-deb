@@ -1,0 +1,5 @@
+fastfetch (2.11.5+dfsg-1) UNRELEASED; urgency=medium
+
+  * Initial release. (Closes: #1053995)
+
+ -- Hiago De Franco <hiagofranco@gmail.com>  Thu, 09 May 2024 19:36:22 -0300
