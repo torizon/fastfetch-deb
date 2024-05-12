@@ -2,6 +2,8 @@ Source: fastfetch
 Section: utils
 Priority: optional
 Maintainer: Hiago De Franco <hiagofranco@gmail.com>
+Uploaders: Carlos Henrique Lima Melara <charlesmelara@riseup.net>,
+           Maytham Alsudany <maytha8thedev@gmail.com>,
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
