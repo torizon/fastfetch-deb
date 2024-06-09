@@ -46,7 +46,7 @@ Multi-Arch: foreign
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Description: like neofetch, but much faster because written mostly in C
+Description: The fastfetch package provides a faster alternative to neofetch.
  Fastfetch is a neofetch-like tool for fetching system information and
  displaying them in a pretty way. It is written mainly in C, with
  performance and customizability in mind.
