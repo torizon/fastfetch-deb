@@ -9,7 +9,6 @@
 #include <sys/sysinfo.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <ctype.h>
 
 #ifdef __ANDROID__
 #include "common/settings.h"
@@ -88,14 +87,14 @@ static const char* parseCpuInfo(FFCPUResult* cpu, FFstrbuf* physicalCoresBuffer,
     return NULL;
 }
 
-static double getFrequency(FFstrbuf* basePath, const char* cpuinfoFileName, const char* scalingFileName, FFstrbuf* buffer)
+static uint32_t getFrequency(FFstrbuf* basePath, const char* cpuinfoFileName, const char* scalingFileName, FFstrbuf* buffer)
 {
     uint32_t baseLen = basePath->length;
     ffStrbufAppendS(basePath, cpuinfoFileName);
     bool ok = ffReadFileBuffer(basePath->chars, buffer);
     ffStrbufSubstrBefore(basePath, baseLen);
     if (ok)
-        return ffStrbufToDouble(buffer) / 1e6;
+        return (uint32_t) ffStrbufToUInt(buffer, 0);
 
     if (scalingFileName)
     {
@@ -103,13 +102,31 @@ static double getFrequency(FFstrbuf* basePath, const char* cpuinfoFileName, cons
         ok = ffReadFileBuffer(basePath->chars, buffer);
         ffStrbufSubstrBefore(basePath, baseLen);
         if (ok)
-            return ffStrbufToDouble(buffer) / 1e6;
+            return (uint32_t) ffStrbufToUInt(buffer, 0);
     }
 
-    return 0.0/0.0;
+    return 0;
 }
 
-static bool detectFrequency(FFCPUResult* cpu)
+static uint8_t getNumCores(FFstrbuf* basePath, FFstrbuf* buffer)
+{
+    uint32_t baseLen = basePath->length;
+    ffStrbufAppendS(basePath, "/affected_cpus");
+    bool ok = ffReadFileBuffer(basePath->chars, buffer);
+    ffStrbufSubstrBefore(basePath, baseLen);
+    if (ok)
+        return (uint8_t) (ffStrbufCountC(buffer, ' ') + 1);
+
+    ffStrbufAppendS(basePath, "/related_cpus");
+    ok = ffReadFileBuffer(basePath->chars, buffer);
+    ffStrbufSubstrBefore(basePath, baseLen);
+    if (ok)
+        return (uint8_t) (ffStrbufCountC(buffer, ' ') + 1);
+
+    return 0;
+}
+
+static bool detectFrequency(FFCPUResult* cpu, const FFCPUOptions* options)
 {
     FF_STRBUF_AUTO_DESTROY path = ffStrbufCreateS("/sys/devices/system/cpu/cpufreq/");
     FF_AUTO_CLOSE_DIR DIR* dir = opendir(path.chars);
@@ -119,38 +136,61 @@ static bool detectFrequency(FFCPUResult* cpu)
     uint32_t baseLen = path.length;
 
     struct dirent* entry;
-    while((entry = readdir(dir)) != NULL)
+    while ((entry = readdir(dir)) != NULL)
     {
-        if (ffStrStartsWith(entry->d_name, "policy") && isdigit(entry->d_name[strlen("policy")]))
+        if (ffStrStartsWith(entry->d_name, "policy") && ffCharIsDigit(entry->d_name[strlen("policy")]))
         {
             ffStrbufAppendS(&path, entry->d_name);
-            double fbase = getFrequency(&path, "/base_frequency", NULL, &buffer);
-            if (fbase == fbase)
+            uint32_t fbase = getFrequency(&path, "/base_frequency", NULL, &buffer);
+            if (fbase > 0)
             {
                 if (cpu->frequencyBase == cpu->frequencyBase)
                     cpu->frequencyBase = cpu->frequencyBase > fbase ? cpu->frequencyBase : fbase;
                 else
                     cpu->frequencyBase = fbase;
             }
-            double fmax = getFrequency(&path, "/cpuinfo_max_freq", "/scaling_max_freq", &buffer);
-            if (fmax == fmax)
+            uint32_t fbioslimit = getFrequency(&path, "/bios_limit", NULL, &buffer);
+            if (fbioslimit > 0)
+            {
+                if (cpu->frequencyBiosLimit == cpu->frequencyBiosLimit)
+                    cpu->frequencyBiosLimit = cpu->frequencyBiosLimit > fbioslimit ? cpu->frequencyBiosLimit : fbioslimit;
+                else
+                    cpu->frequencyBiosLimit = fbioslimit;
+            }
+            uint32_t fmax = getFrequency(&path, "/cpuinfo_max_freq", "/scaling_max_freq", &buffer);
+            if (fmax > 0)
             {
                 if (cpu->frequencyMax == cpu->frequencyMax)
                     cpu->frequencyMax = cpu->frequencyMax > fmax ? cpu->frequencyMax : fmax;
                 else
                     cpu->frequencyMax = fmax;
             }
-            double fmin = getFrequency(&path, "/cpuinfo_min_freq", "/scaling_min_freq", &buffer);
-            if (fmin == fmin)
+            uint32_t fmin = getFrequency(&path, "/cpuinfo_min_freq", "/scaling_min_freq", &buffer);
+            if (fmin > 0)
             {
                 if (cpu->frequencyMin == cpu->frequencyMin)
                     cpu->frequencyMin = cpu->frequencyMin < fmin ? cpu->frequencyMin : fmin;
                 else
                     cpu->frequencyMin = fmin;
             }
+
+            if (options->showPeCoreCount)
+            {
+                uint32_t freq = fbase == 0 ? fmax : fbase; // seems base frequencies are more stable
+                uint32_t ifreq = 0;
+                while (cpu->coreTypes[ifreq].freq != freq && cpu->coreTypes[ifreq].freq > 0)
+                    ++ifreq;
+                if (cpu->coreTypes[ifreq].freq == 0)
+                    cpu->coreTypes[ifreq].freq = freq;
+                cpu->coreTypes[ifreq].count += getNumCores(&path, &buffer);
+            }
             ffStrbufSubstrBefore(&path, baseLen);
         }
     }
+    cpu->frequencyBase /= 1e6;
+    cpu->frequencyMax /= 1e6;
+    cpu->frequencyMin /= 1e6;
+    cpu->frequencyBiosLimit /= 1e6;
     return true;
 }
 
@@ -232,7 +272,7 @@ const char* ffDetectCPUImpl(const FFCPUOptions* options, FFCPUResult* cpu)
     cpu->coresOnline = (uint16_t) get_nprocs();
     cpu->coresPhysical = (uint16_t) ffStrbufToUInt(&physicalCoresBuffer, cpu->coresLogical);
 
-    if (!detectFrequency(cpu) || cpu->frequencyBase != cpu->frequencyBase)
+    if (!detectFrequency(cpu, options) || cpu->frequencyBase != cpu->frequencyBase)
         cpu->frequencyBase = ffStrbufToDouble(&cpuMHz) / 1000;
 
     if(cpuUarch.length > 0)

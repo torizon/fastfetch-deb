@@ -1,6 +1,7 @@
 #include "cpu.h"
 #include "detection/temps/temps_windows.h"
 #include "util/windows/registry.h"
+#include "util/windows/nt.h"
 #include "util/mallocHelper.h"
 #include "util/smbiosHelper.h"
 
@@ -48,7 +49,10 @@ typedef struct FFSmbiosProcessorInfo
 
     // 3.6+
     uint16_t ThreadEnabled; // varies
-} FFSmbiosProcessorInfo;
+} __attribute__((__packed__)) FFSmbiosProcessorInfo;
+
+static_assert(offsetof(FFSmbiosProcessorInfo, ThreadEnabled) == 0x30,
+    "FFSmbiosProcessorInfo: Wrong struct alignment");
 
 #if defined(__x86_64__) || defined(__i386__)
 
@@ -77,7 +81,11 @@ inline static const char* detectSpeedByCpuid(FF_MAYBE_UNUSED FFCPUResult* cpu)
 
 static const char* detectMaxSpeedBySmbios(FFCPUResult* cpu)
 {
-    const FFSmbiosProcessorInfo* data = (const FFSmbiosProcessorInfo*) (*ffGetSmbiosHeaderTable())[FF_SMBIOS_TYPE_PROCESSOR_INFO];
+    const FFSmbiosHeaderTable* smbiosTable = ffGetSmbiosHeaderTable();
+    if (!smbiosTable)
+        return "Failed to get SMBIOS data";
+
+    const FFSmbiosProcessorInfo* data = (const FFSmbiosProcessorInfo*) (*smbiosTable)[FF_SMBIOS_TYPE_PROCESSOR_INFO];
 
     if (!data)
         return "Processor information is not found in SMBIOS data";
@@ -118,9 +126,9 @@ static const char* detectNCores(FFCPUResult* cpu)
         ptr = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)(((uint8_t*)ptr) + ptr->Size)
     )
     {
-        if(ptr->Relationship == RelationProcessorCore)
+        if (ptr->Relationship == RelationProcessorCore)
             ++cpu->coresPhysical;
-        else if(ptr->Relationship == RelationGroup)
+        else if (ptr->Relationship == RelationGroup)
         {
             for (uint32_t index = 0; index < ptr->Group.ActiveGroupCount; ++index)
             {
@@ -139,13 +147,6 @@ static const char* detectByRegistry(FFCPUResult* cpu)
     if(!ffRegOpenKeyForRead(HKEY_LOCAL_MACHINE, L"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", &hKey, NULL))
         return "ffRegOpenKeyForRead(HKEY_LOCAL_MACHINE, L\"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0\", &hKey, NULL) failed";
 
-    if (detectSpeedByCpuid(cpu) != NULL || cpu->frequencyBase != cpu->frequencyBase)
-    {
-        uint32_t mhz;
-        if(ffRegReadUint(hKey, L"~MHz", &mhz, NULL))
-            cpu->frequencyBase = mhz / 1000.0;
-    }
-
     ffRegReadStrbuf(hKey, L"ProcessorNameString", &cpu->name, NULL);
     ffRegReadStrbuf(hKey, L"VendorIdentifier", &cpu->vendor, NULL);
 
@@ -156,6 +157,31 @@ static const char* detectByRegistry(FFCPUResult* cpu)
             cpu->coresOnline = cpu->coresPhysical = cpu->coresLogical = (uint16_t) cores;
     }
 
+    uint32_t mhz;
+    if(ffRegReadUint(hKey, L"~MHz", &mhz, NULL))
+        cpu->frequencyBase = mhz / 1000.0;
+
+    return NULL;
+}
+
+static const char* detectCoreTypes(FFCPUResult* cpu)
+{
+    FF_AUTO_FREE PROCESSOR_POWER_INFORMATION* pinfo = calloc(cpu->coresLogical, sizeof(PROCESSOR_POWER_INFORMATION));
+    if (!NT_SUCCESS(NtPowerInformation(ProcessorInformation, NULL, 0, pinfo, (ULONG) sizeof(PROCESSOR_POWER_INFORMATION) * cpu->coresLogical)))
+        return "NtPowerInformation(ProcessorInformation, NULL, 0, pinfo, size) failed";
+
+    for (uint32_t icore = 0; icore < cpu->coresLogical && pinfo[icore].MhzLimit; ++icore)
+    {
+        uint32_t ifreq = 0;
+        while (cpu->coreTypes[ifreq].freq != pinfo[icore].MhzLimit && cpu->coreTypes[ifreq].freq > 0)
+            ++ifreq;
+        if (cpu->coreTypes[ifreq].freq == 0)
+            cpu->coreTypes[ifreq].freq = pinfo[icore].MhzLimit;
+        ++cpu->coreTypes[ifreq].count;
+    }
+
+    if (cpu->frequencyBase != cpu->frequencyBase)
+        cpu->frequencyBase = pinfo->MaxMhz / 1000.0;
     return NULL;
 }
 
@@ -166,6 +192,9 @@ const char* ffDetectCPUImpl(const FFCPUOptions* options, FFCPUResult* cpu)
     const char* error = detectByRegistry(cpu);
     if (error)
         return error;
+
+    detectSpeedByCpuid(cpu);
+    if (options->showPeCoreCount) detectCoreTypes(cpu);
 
     if (cpu->frequencyMax != cpu->frequencyMax)
         detectMaxSpeedBySmbios(cpu);

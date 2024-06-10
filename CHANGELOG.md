@@ -1,34 +1,180 @@
+# 2.15.0
+
+Changes:
+* `--bar-border <?bool>` has been changed to `--bar-border-left <string>` and `--bar-border-right <string>`, which are used for customizing the style of bar border.
+    * `--bar-border-left '' --bar-border-right ''` can be used to disable the border
+
+Features:
+* Add ability to skip installing license with INSTALL_LICENSE option (CMake)
+* Make it possible to shorten the theme and icons output (Theme / Icons)
+* Support `-l '?'` to show a question mark
+* Add new module `CPUCache` to display CPU cache sizes (CPUCache)
+* In `--<module>-format`, `{#keys}` and `{#title}` can be used to reference the color of keys and title
+* Improve speed of Guix package detection (Packages, Linux)
+* Assume wm plugins are daemon processes to improve performance (WM, macOS)
+
+Bugfixes:
+* Remove shebangs from completions (#980)
+* Fix while chars not visible in terminal of light theme (Logo)
+* Normalize bright colors to fix color display in Apple Terminal (#991, Colors)
+* Correctly capitalize GNOME (#997, DE, Linux)
+* Fix segfault on system using turkish language (#995, InitSystem, Linux)
+* Fix kubuntu detection (#1000, OS, Linux)
+* Don't display duplicate entries (OS, Linux)
+
+# 2.14.0
+
+Features:
+* Support monochrome bar type (#960)
+* Support editor version detection on Windows (Editor, Windows)
+* Apply default color palettes in `--file` and `--data` (Logo)
+* Print all presets in `--list-presets` for better Windows support (Windows)
+* Support for guix package manager detection (Packages, Linux)
+* Support named variable placeholders in custom module formattion string (#796)
+    * `--title-format '{user-name-colored}{at-symbol-colored}{host-name-colored}'` is now equivalent to `--title-format '{6}{7}{8}'`
+* Support named color placeholders in custom module formattion string
+    * `--<module>-format '{#red}'` is now equivalent to `--<module>-format '{#31}'`
+    * `'{#red}'` or `'{#31}'` is preferred over `\u001b[31m` because is more readable and `--pipe` aware (will be ignored in pipe mode)
+    * Supported in `Custom` module too
+    * See `fastfetch -h format` for detail
+* Add new module `InitSystem`, which detects the name of init system
+    * i.e. process name of pid1. `init`, `systemd`, etc
+* Add option `--color-separator` to set the color of key-value separators
+* Support Guix package manager count (#792, Packages, Linux)
+* Improve python based shell detection (#977, Shell, macOS)
+* Print error reason when vulkan init fails (Vulkan)
+
+Bugfixes:
+* Don't detect `.conf` files in `--list-config-paths`
+* Don't try to detect terminals in MSYS shell with process backtracing (Windows)
+* Fix `outputColor` doesn't work if module keys are disabled
+
+Logos:
+* Add Cereus Linux
+* Re-add special handling of Loc-OS
+
+# 2.13.2
+
+Another hotfix release :(
+
+Bugfixes:
+* Remove DRM driver version detection feature, which caused a performance regression for nouveau drivers (#956, Display, Linux)
+* Fix compatibility for old python versions. Regression of `2.13.0`
+* Don't use `*-unknown` as display name for Wayland protocol (Display, Linux)
+
+Features:
+* Add new module `Editor` which prints information of the default editor, i.e. $VISUAL or $EDITOR (#430, Editor)
+
+Logos:
+* Added CuerdOS
+* Remove special handling of Loc-OS
+
+# 2.13.1
+
+Fix a regression introduced in v2.13.0
+
+Bugfixes:
+* Fix CPU frequency not displayed if `bios_limit` is not available (CPU, Linux)
+
+Features:
+* Add `--cpu-show-pe-core-count` to detect and display core count for performance / efficiency cores (CPU, FreeBSD)
+
+# 2.13.0
+
+Changes:
+* Option `--gpu-force-vulkan <?bool>` has been changed to `--gpu-detection-method <enum>`
+    * Use `--gpu-detection-method vulkan` to get the old behavior
+    * See `fastfetch -h gpu-detection-method` for detail
+* In Linux, BIOS limited CPU frequency is printed by default to match the behavior of neofetch (CPU, Linux, #947)
+
+Features:
+* Add new module `Bootmgr` which prints information of stage 2 bootloader (grub, system-boot, etc)
+    * Requires root permission to work on Windows and FreeBSD
+    * Requires booting in UEFI mode
+* Add package manager lpkg and lpkg-build support (Packages, Linux)
+* Improve macOS 10.13 compatibility (macOS)
+* Detect core count for performance / efficiency cores (CPU)
+    * Test it with `fastfetch -s cpu --cpu-format '{9}'`
+* Support min / max frequency and physical core count detection in FreeBSD, if kernel supports it (CPU, FreeBSD)
+* Detect DRM driver version if DRM detection method is used (GPU, Linux)
+
+Bugfixes:
+* Don't detect `clifm` and `valgrind` as a terminal (Terminal, Linux)
+* Improve stability (PhysicalMemory, FreeBSD)
+* Fix bssid & status detection (Wifi, FreeBSD)
+* Ensure createTime is correctly initialized (Disk, FreeBSD / macOS)
+* Fix `--cpu-freq-ndigits` not working if `--cpu-format` is used
+* Fix `nix-user` package count detection (Packages, Linux)
+* Fix some memory leaks
+
+Logos:
+* Fix Manjaro logo not displayed
+* Add SpoinkOS
+* Add Loc-OS
+* Add Furreto Linux
+* Fix TorizonCore logo colors
+* Fix KDE neon logo not displayed
+
+# 2.12.0
+
+Changes:
+* The long deprecated flag based config files are removed.
+    * They can still be used with `xargs fastfetch < /path/to/config.conf`
+    * `--gen-config` can be used to migrate them to json based config files
+* The long deprecated options `--set` and `--set-keyless` are removed.
+* `Kernel` module now prints kernel name by default
+
+Features:
+* Support `st` terminal font detection for font configuration compiled in `st` binary (TerminalFont, Linux)
+* Add option `--color-output` to change output color of all modules except `Title`, `Separator`
+    * `display.color.output` in JSONC config file
+* Add option `--<module>-output-color` to change output color of one specified module, which overrides the global option `--color-output`
+* Add option `--publicip-ipv6` to print IPv6 address (PublicIP)
+* Add new module `Loadavg` to print load averages (Loadavg)
+* Add new module `PhysicalMemory` to print information of physical memory devices (PhysicalMemory)
+    * Requires root permission to work on Linux and FreeBSD
+* Support specifying `--logo-width` only for `--kitty-direct` and `--iterm` (Logo)
+* Add option `--localip-show-all-ips` to show all IPs assigned to the same interface (LocalIP)
+    * Default to `false`
+* Improve compatibility with `(*term)` (#909, Terminal, macOS)
+* Support GPU core count and frequency detection for Asahi Linux (GPU, Linux)
+
+Bugfixes:
+* Rename option `--temperature-unit` to `--temp-unit` as documented in help messages
+* Fix alternate logo doesn't work with `{ "type": "builtin" }` (#914, Logo)
+
+Logos:
+* Fix DahliaOS detection
+* Add openSUSE Slowroll
+* Add macOS3
+* Add Quirinux
+
 # 2.11.5
 
 Bugfix:
-
 * Fix logo printing for OpenMandriva (#896)
 * Remove `--os-file` in help messages
 
 # 2.11.4
 
 Changes:
-
 * Fastfetch will print a colorless ascii logo in `--pipe` mode for better `lolcat` compatibility. `fastfetch | lolcat` should work and no `--pipe false` needed.
     * Previously the logo would be disabled in `--pipe` mode.
-* `--os-file` was removed and CMake option `-DCUSTOM_OS_RELEASE_PATH=/path/to/os-release` was added. This option should not used in most cases.
+    * Use `--pipe -l none` to get the old beheavior
+* `--os-file` was removed and CMake option `-DCUSTOM_OS_RELEASE_PATH=/path/to/os-release` was introduced for configuring at compile time by package managers if needed. This option should not used in most cases.
 
 Bugfixes:
-
 * Fix possible out-of-bound memory access (#868)
-* Fix Apple Terminal detection (macOS, Terminal)
-* Fix doubled output in custom formation (#852)
+* Fix Apple Terminal detection (#878, macOS, Terminal)
 * Fix deprecation warning for macOS 14.0 hopefully (#860, macOS, Camera)
-* Fix memory leaks when passing informative options
+* Fix memory leaks when passing informative options (#888)
 * Fix JSON config `size.ndigits` doesn't work 
 
 Features:
-
 * Enable `--pipe` mode if environment variable `$NO_COLOR` is set
 * Support Armbian and Proxmox distro detection (OS, Linux)
 
 Logo:
-
 * Add Armbian
 
 # 2.11.3
@@ -134,7 +280,7 @@ Features:
 * Improve GPU detection on Linux (GPU, Linux)
     * Support GPU memory usage detection for AMD GPUs
     * Support GPU frequency detection for Intel GPUs
-* Improve performance of Gnome version detection (DE, Linux)
+* Improve performance of GNOME version detection (DE, Linux)
 * Improve performance of kitty version detection (Terminal, Linux)
 * Detect refresh rate when using `--ds-force-drm sysfs-only` (Display, Linux)
 * Add option `--ts-version` to disable terminal and shell version detection. Mainly for benchmarking purposes
@@ -841,7 +987,7 @@ Bugfixes:
 * Fix Windows drives detection in WSL (Linux, Disk)
 * Fix CPU temp detection (FreeBSD, CPU)
 * Fix disk detection (Android, Disk)
-* Fix Gnome Terminal version and font detection (FreeBSD, TerminalFont)
+* Fix GNOME Terminal version and font detection (FreeBSD, TerminalFont)
 * Fix crash on newer wayland desktops (Linux, Display, #477)
 * Fix vendor detection for Intel GPU (macOS, GPU)
 * Fix possible crashes on Windows Server (Windows, GPU, #484)
@@ -867,7 +1013,7 @@ Features:
 * Add mac address detection `--localip-show-mac` (LocalIP, #451)
 
 Bugfixes:
-* Fix Gnome version detection on Fedora (DE)
+* Fix GNOME version detection on Fedora (DE)
 * Fix Windows drives detection in WSL (Disk)
 
 Changes:

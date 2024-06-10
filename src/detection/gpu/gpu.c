@@ -14,42 +14,24 @@ const char* FF_GPU_VENDOR_NAME_MICROSOFT = "Microsoft";
 const char* FF_GPU_VENDOR_NAME_REDHAT = "RedHat";
 const char* FF_GPU_VENDOR_NAME_ORACLE = "Oracle";
 
-static inline bool arrayContains(const unsigned arr[], unsigned vendorId, unsigned length)
-{
-    for (unsigned i = 0; i < length; ++i)
-    {
-        if (arr[i] == vendorId)
-            return true;
-    }
-    return false;
-}
-
 const char* ffGetGPUVendorString(unsigned vendorId)
 {
     // https://devicehunt.com/all-pci-vendors
-    if(vendorId == 0x106b)
-        return FF_GPU_VENDOR_NAME_APPLE;
-    if(arrayContains((const unsigned[]) {0x1002, 0x1022}, vendorId, 2))
-        return FF_GPU_VENDOR_NAME_AMD;
-    else if(arrayContains((const unsigned[]) {0x03e7, 0x8086, 0x8087}, vendorId, 3))
-        return FF_GPU_VENDOR_NAME_INTEL;
-    else if(arrayContains((const unsigned[]) {0x0955, 0x10de, 0x12d2}, vendorId, 3))
-        return FF_GPU_VENDOR_NAME_NVIDIA;
-    else if(arrayContains((const unsigned[]) {0x5143}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_QUALCOMM;
-    else if(arrayContains((const unsigned[]) {0x14c3}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_MTK;
-    else if(arrayContains((const unsigned[]) {0x15ad}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_VMWARE;
-    else if(arrayContains((const unsigned[]) {0x1af4}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_REDHAT;
-    else if(arrayContains((const unsigned[]) {0x1ab8}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_PARALLEL;
-    else if(arrayContains((const unsigned[]) {0x1414}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_MICROSOFT;
-    else if(arrayContains((const unsigned[]) {0x108e}, vendorId, 1))
-        return FF_GPU_VENDOR_NAME_ORACLE;
-    return NULL;
+    switch (vendorId)
+    {
+        case 0x106b: return FF_GPU_VENDOR_NAME_APPLE;
+        case 0x1002: case 0x1022: return FF_GPU_VENDOR_NAME_AMD;
+        case 0x8086: case 0x8087: case 0x03e7: return FF_GPU_VENDOR_NAME_INTEL;
+        case 0x0955: case 0x10de: case 0x12d2: return FF_GPU_VENDOR_NAME_NVIDIA;
+        case 0x5143: return FF_GPU_VENDOR_NAME_QUALCOMM;
+        case 0x14c3: return FF_GPU_VENDOR_NAME_MTK;
+        case 0x15ad: return FF_GPU_VENDOR_NAME_VMWARE;
+        case 0x1af4: return FF_GPU_VENDOR_NAME_REDHAT;
+        case 0x1ab8: return FF_GPU_VENDOR_NAME_PARALLEL;
+        case 0x1414: return FF_GPU_VENDOR_NAME_MICROSOFT;
+        case 0x108e: return FF_GPU_VENDOR_NAME_ORACLE;
+        default: return NULL;
+    }
 }
 
 const char* detectByOpenGL(FFlist* gpus)
@@ -64,9 +46,9 @@ const char* detectByOpenGL(FFlist* gpus)
     {
         FFGPUResult* gpu = (FFGPUResult*) ffListAdd(gpus);
         gpu->type = FF_GPU_TYPE_UNKNOWN;
-        ffStrbufInitMove(&gpu->vendor, &result.vendor);
+        ffStrbufInit(&gpu->vendor);
         ffStrbufInitMove(&gpu->name, &result.renderer);
-        ffStrbufInit(&gpu->driver);
+        ffStrbufInitMove(&gpu->driver, &result.vendor);
         ffStrbufInitF(&gpu->platformApi, "OpenGL %s", result.version.chars);
         gpu->temperature = FF_GPU_TEMP_UNSET;
         gpu->coreCount = FF_GPU_CORE_COUNT_UNSET;
@@ -74,22 +56,18 @@ const char* detectByOpenGL(FFlist* gpus)
         gpu->dedicated = gpu->shared = (FFGPUMemory){0, 0};
         gpu->deviceId = 0;
 
-        if (ffStrbufIgnCaseEqualS(&gpu->vendor, "Mesa"))
-            ffStrbufClear(&gpu->vendor);
-
-        if (!gpu->vendor.length)
+        if (ffStrbufContainS(&gpu->name, "Apple"))
         {
-            if (ffStrbufContainS(&gpu->name, "Apple"))
-                ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_APPLE);
-            else if (ffStrbufContainS(&gpu->name, "Intel"))
-                ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_INTEL);
-            else if (ffStrbufContainS(&gpu->name, "AMD") || ffStrbufContainS(&gpu->name, "ATI"))
-                ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_AMD);
-            else if (ffStrbufContainS(&gpu->name, "NVIDIA"))
-                ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_NVIDIA);
-        }
-        if (ffStrbufEqualS(&gpu->vendor, FF_GPU_VENDOR_NAME_APPLE))
+            ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_APPLE);
             gpu->type = FF_GPU_TYPE_INTEGRATED;
+        }
+        else if (ffStrbufContainS(&gpu->name, "Intel"))
+            ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_INTEL);
+        else if (ffStrbufContainS(&gpu->name, "AMD") || ffStrbufContainS(&gpu->name, "ATI"))
+            ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_AMD);
+        else if (ffStrbufContainS(&gpu->name, "NVIDIA"))
+            ffStrbufSetStatic(&gpu->vendor, FF_GPU_VENDOR_NAME_NVIDIA);
+
     }
 
     ffStrbufDestroy(&result.version);
@@ -101,20 +79,26 @@ const char* detectByOpenGL(FFlist* gpus)
 
 const char* ffDetectGPU(const FFGPUOptions* options, FFlist* result)
 {
-    if (!options->forceVulkan)
+    if (options->detectionMethod <= FF_GPU_DETECTION_METHOD_PCI)
     {
         const char* error = ffDetectGPUImpl(options, result);
         if (!error && result->length > 0) return NULL;
     }
-    FFVulkanResult* vulkan = ffDetectVulkan();
-    if (!vulkan->error && vulkan->gpus.length > 0)
+    if (options->detectionMethod <= FF_GPU_DETECTION_METHOD_VULKAN)
     {
-        ffListDestroy(result);
-        ffListInitMove(result, &vulkan->gpus);
-        return NULL;
+        FFVulkanResult* vulkan = ffDetectVulkan();
+        if (!vulkan->error && vulkan->gpus.length > 0)
+        {
+            ffListDestroy(result);
+            ffListInitMove(result, &vulkan->gpus);
+            return NULL;
+        }
     }
-    if (detectByOpenGL(result) == NULL)
-        return NULL;
+    if (options->detectionMethod <= FF_GPU_DETECTION_METHOD_OPENGL)
+    {
+        if (detectByOpenGL(result) == NULL)
+            return NULL;
+    }
 
     return "GPU detection failed";
 }

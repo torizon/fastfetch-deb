@@ -19,19 +19,19 @@ static void printDevice(FFGamepadOptions* options, const FFGamepadDevice* device
         {
             if (buffer.length)
                 ffStrbufAppendC(&buffer, ' ');
-            ffPercentAppendNum(&buffer, device->battery, options->percent, buffer.length > 0);
+            ffPercentAppendNum(&buffer, device->battery, options->percent, buffer.length > 0, &options->moduleArgs);
         }
         ffStrbufPutTo(&buffer, stdout);
     }
     else
     {
         FF_STRBUF_AUTO_DESTROY percentageStr = ffStrbufCreate();
-        ffPercentAppendNum(&percentageStr, device->battery, options->percent, false);
+        ffPercentAppendNum(&percentageStr, device->battery, options->percent, false, &options->moduleArgs);
 
         FF_PRINT_FORMAT_CHECKED(FF_GAMEPAD_MODULE_NAME, index, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_GAMEPAD_NUM_FORMAT_ARGS, ((FFformatarg[]) {
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->name},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->serial},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->name, "name"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->serial, "serial"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr, "battery-percentage"},
         }));
     }
 }
@@ -136,9 +136,9 @@ void ffGenerateGamepadJsonResult(FF_MAYBE_UNUSED FFGamepadOptions* options, yyjs
 void ffPrintGamepadHelpFormat(void)
 {
     FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_GAMEPAD_MODULE_NAME, "{1} ({3})", FF_GAMEPAD_NUM_FORMAT_ARGS, ((const char* []) {
-        "Name",
-        "Serial number",
-        "Battery percentage",
+        "Name - name",
+        "Serial number - serial",
+        "Battery percentage - battery-percentage",
     }));
 }
 

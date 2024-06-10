@@ -37,19 +37,19 @@ void ffPrintSwap(FFSwapOptions* options)
         {
             if(instance.config.display.percentType & FF_PERCENTAGE_TYPE_BAR_BIT)
             {
-                ffPercentAppendBar(&str, 0, options->percent);
+                ffPercentAppendBar(&str, 0, options->percent, &options->moduleArgs);
                 ffStrbufAppendC(&str, ' ');
             }
             if(!(instance.config.display.percentType & FF_PERCENTAGE_TYPE_HIDE_OTHERS_BIT))
                 ffStrbufAppendS(&str, "Disabled");
             else
-                ffPercentAppendNum(&str, 0, options->percent, str.length > 0);
+                ffPercentAppendNum(&str, 0, options->percent, str.length > 0, &options->moduleArgs);
         }
         else
         {
             if(instance.config.display.percentType & FF_PERCENTAGE_TYPE_BAR_BIT)
             {
-                ffPercentAppendBar(&str, percentage, options->percent);
+                ffPercentAppendBar(&str, percentage, options->percent, &options->moduleArgs);
                 ffStrbufAppendC(&str, ' ');
             }
 
@@ -57,7 +57,7 @@ void ffPrintSwap(FFSwapOptions* options)
                 ffStrbufAppendF(&str, "%s / %s ", usedPretty.chars, totalPretty.chars);
 
             if(instance.config.display.percentType & FF_PERCENTAGE_TYPE_NUM_BIT)
-                ffPercentAppendNum(&str, percentage, options->percent, str.length > 0);
+                ffPercentAppendNum(&str, percentage, options->percent, str.length > 0, &options->moduleArgs);
         }
 
         ffStrbufTrimRight(&str, ' ');
@@ -66,11 +66,11 @@ void ffPrintSwap(FFSwapOptions* options)
     else
     {
         FF_STRBUF_AUTO_DESTROY percentageStr = ffStrbufCreate();
-        ffPercentAppendNum(&percentageStr, percentage, options->percent, false);
+        ffPercentAppendNum(&percentageStr, percentage, options->percent, false, &options->moduleArgs);
         FF_PRINT_FORMAT_CHECKED(FF_SWAP_MODULE_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_SWAP_NUM_FORMAT_ARGS, ((FFformatarg[]){
-            {FF_FORMAT_ARG_TYPE_STRBUF, &usedPretty},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &totalPretty},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &usedPretty, "used"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &totalPretty, "total"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr, "percentage"},
         }));
     }
 }
@@ -137,9 +137,9 @@ void ffGenerateSwapJsonResult(FF_MAYBE_UNUSED FFSwapOptions* options, yyjson_mut
 void ffPrintSwapHelpFormat(void)
 {
     FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_SWAP_MODULE_NAME, "{1} / {2} ({3})", FF_SWAP_NUM_FORMAT_ARGS, ((const char* []) {
-        "Used size",
-        "Total size",
-        "Percentage used"
+        "Used size - used",
+        "Total size - total",
+        "Percentage used - percentage",
     }));
 }
 

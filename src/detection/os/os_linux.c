@@ -31,7 +31,7 @@ static bool parseLsbRelease(const char* fileName, FFOSResult* result)
 
 static bool parseOsRelease(const char* fileName, FFOSResult* result)
 {
-    return ffParsePropFileValues(fileName, 10, (FFpropquery[]) {
+    return ffParsePropFileValues(fileName, 11, (FFpropquery[]) {
         {"PRETTY_NAME =", &result->prettyName},
         {"NAME =", &result->name},
         {"ID =", &result->id},
@@ -41,7 +41,8 @@ static bool parseOsRelease(const char* fileName, FFOSResult* result)
         {"VERSION =", &result->version},
         {"VERSION_ID =", &result->versionID},
         {"VERSION_CODENAME =", &result->codename},
-        {"BUILD_ID =", &result->buildID}
+        {"CODENAME =", &result->codename},
+        {"BUILD_ID =", &result->buildID},
     });
 }
 
@@ -51,7 +52,7 @@ static void getUbuntuFlavour(FFOSResult* result)
     if(!ffStrSet(xdgConfigDirs))
         return;
 
-    if(strstr(xdgConfigDirs, "kde") != NULL || strstr(xdgConfigDirs, "plasma") != NULL)
+    if(ffStrContains(xdgConfigDirs, "kde") || ffStrContains(xdgConfigDirs, "plasma") || ffStrContains(xdgConfigDirs, "kubuntu"))
     {
         ffStrbufSetS(&result->name, "Kubuntu");
         ffStrbufSetS(&result->prettyName, "Kubuntu");
@@ -60,7 +61,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "xfce") != NULL || strstr(xdgConfigDirs, "xubuntu") != NULL)
+    if(ffStrContains(xdgConfigDirs, "xfce") || ffStrContains(xdgConfigDirs, "xubuntu"))
     {
         ffStrbufSetS(&result->name, "Xubuntu");
         ffStrbufSetS(&result->prettyName, "Xubuntu");
@@ -69,7 +70,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "lxde") != NULL || strstr(xdgConfigDirs, "lubuntu") != NULL)
+    if(ffStrContains(xdgConfigDirs, "lxde") || ffStrContains(xdgConfigDirs, "lubuntu"))
     {
         ffStrbufSetS(&result->name, "Lubuntu");
         ffStrbufSetS(&result->prettyName, "Lubuntu");
@@ -78,7 +79,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "budgie") != NULL)
+    if(ffStrContains(xdgConfigDirs, "budgie"))
     {
         ffStrbufSetS(&result->name, "Ubuntu Budgie");
         ffStrbufSetS(&result->prettyName, "Ubuntu Budgie");
@@ -87,7 +88,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "cinnamon") != NULL)
+    if(ffStrContains(xdgConfigDirs, "cinnamon"))
     {
         ffStrbufSetS(&result->name, "Ubuntu Cinnamon");
         ffStrbufSetS(&result->prettyName, "Ubuntu Cinnamon");
@@ -96,7 +97,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "mate") != NULL)
+    if(ffStrContains(xdgConfigDirs, "mate"))
     {
         ffStrbufSetS(&result->name, "Ubuntu MATE");
         ffStrbufSetS(&result->prettyName, "Ubuntu MATE");
@@ -105,7 +106,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "studio") != NULL)
+    if(ffStrContains(xdgConfigDirs, "studio"))
     {
         ffStrbufSetS(&result->name, "Ubuntu Studio");
         ffStrbufSetS(&result->prettyName, "Ubuntu Studio");
@@ -114,7 +115,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "sway") != NULL)
+    if(ffStrContains(xdgConfigDirs, "sway"))
     {
         ffStrbufSetS(&result->name, "Ubuntu Sway");
         ffStrbufSetS(&result->prettyName, "Ubuntu Sway");
@@ -123,7 +124,7 @@ static void getUbuntuFlavour(FFOSResult* result)
         return;
     }
 
-    if(strstr(xdgConfigDirs, "touch") != NULL)
+    if(ffStrContains(xdgConfigDirs, "touch"))
     {
         ffStrbufSetS(&result->name, "Ubuntu Touch");
         ffStrbufSetS(&result->prettyName, "Ubuntu Touch");
@@ -154,6 +155,12 @@ static bool detectDebianDerived(FFOSResult* result)
         uint32_t versionStart = ffStrbufFirstIndexC(&result->prettyName, ' ') + 1;
         uint32_t versionEnd = ffStrbufNextIndexC(&result->prettyName, versionStart, ' ');
         ffStrbufSetNS(&result->versionID, versionEnd - versionStart, result->prettyName.chars + versionStart);
+        return true;
+    }
+    else if (ffStrbufStartsWithS(&result->name, "Loc-OS"))
+    {
+        ffStrbufSetS(&result->id, "locos");
+        ffStrbufSetS(&result->idLike, "debian");
         return true;
     }
     else if (ffPathExists("/usr/bin/pveversion", FF_PATHTYPE_FILE))

@@ -21,6 +21,8 @@ typedef struct FFOptionsDisplay
     //If one of those is empty, ffLogoPrint will set them
     FFstrbuf colorKeys;
     FFstrbuf colorTitle;
+    FFstrbuf colorOutput;
+    FFstrbuf colorSeparator;
 
     bool brightColor;
 
@@ -34,15 +36,16 @@ typedef struct FFOptionsDisplay
     FFBinaryPrefixType binaryPrefixType;
     uint8_t sizeNdigits;
     uint8_t sizeMaxPrefix;
-    FFTemperatureUnit temperatureUnit;
+    FFTemperatureUnit tempUnit;
     uint8_t tempNdigits;
     FFstrbuf tempColorGreen;
     FFstrbuf tempColorYellow;
     FFstrbuf tempColorRed;
     FFstrbuf barCharElapsed;
     FFstrbuf barCharTotal;
+    FFstrbuf barBorderLeft;
+    FFstrbuf barBorderRight;
     uint8_t barWidth;
-    bool barBorder;
     uint8_t percentType;
     uint8_t percentNdigits;
     FFstrbuf percentColorGreen;

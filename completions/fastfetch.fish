@@ -1,5 +1,3 @@
-#!/usr/bin/env fish
-
 if not type -q fastfetch
     exit
 end
@@ -85,7 +83,7 @@ string match -r -a -g "^###> ?(.*)" < (status -f) | string collect | python3 | s
 ###>                 elif type == 'config':
 ###>                     print(f'{command_prefix} -x -a "(__fastfetch_complete_config)"')
 ###>                 elif type == 'enum':
-###>                     temp: str = ' '.join(map(lambda x: f"{x[0]}\\t{x[1]}", flag["arg"]["enum"].items()))
+###>                     temp: str = ' '.join(flag["arg"]["enum"])
 ###>                     print(f'{command_prefix} -x -a "{temp}"')
 ###>                 elif type == 'logo':
 ###>                     print(f'{command_prefix} -x -a "(__fastfetch_complete_logo)"')

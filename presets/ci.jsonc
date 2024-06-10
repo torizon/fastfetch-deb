@@ -6,19 +6,24 @@
     "showErrors": true,
     "noBuffer": true
   },
+  "logo": null,
   "modules": [
     "title",
     "separator",
     "os",
     "host",
     "bios",
+    "bootmgr",
     "board",
     "chassis",
     "kernel",
+    "initsystem",
     "uptime",
+    "loadavg",
     "processes",
     "packages",
     "shell",
+    "editor",
     "display",
     "brightness",
     "monitor",
@@ -35,10 +40,19 @@
     "terminalfont",
     "terminalsize",
     "terminaltheme",
-    "cpu",
+    {
+        "type": "cpu",
+        "showPeCoreCount": true,
+        "temp": true
+    },
+    "cpucache",
     "cpuusage",
-    "gpu",
+    {
+        "type": "gpu",
+        "temp": true
+    },
     "memory",
+    "physicalmemory",
     "swap",
     "disk",
     "battery",
@@ -46,7 +60,11 @@
     "player",
     "media",
     "publicip",
-    "localip",
+    {
+        "type": "localip",
+        "showIpv6": true,
+        "showMac": true
+    },
     "wifi",
     "datetime",
     "locale",
@@ -64,7 +82,10 @@
     },
     "netio",
     "diskio",
-    "physicaldisk",
+    {
+        "type": "physicaldisk",
+        "temp": true
+    },
     "version",
     "break",
     "colors"
