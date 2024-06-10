@@ -24,7 +24,7 @@ static void printDevice(FFSoundOptions* options, const FFSoundDevice* device, ui
                 if (str.length)
                     ffStrbufAppendC(&str, ' ');
 
-                ffPercentAppendBar(&str, device->volume, options->percent);
+                ffPercentAppendBar(&str, device->volume, options->percent, &options->moduleArgs);
             }
 
             if (instance.config.display.percentType & FF_PERCENTAGE_TYPE_NUM_BIT)
@@ -32,7 +32,7 @@ static void printDevice(FFSoundOptions* options, const FFSoundDevice* device, ui
                 if (str.length)
                     ffStrbufAppendC(&str, ' ');
 
-                ffPercentAppendNum(&str, device->volume, options->percent, str.length > 0);
+                ffPercentAppendNum(&str, device->volume, options->percent, str.length > 0, &options->moduleArgs);
             }
         }
 
@@ -47,13 +47,13 @@ static void printDevice(FFSoundOptions* options, const FFSoundDevice* device, ui
     else
     {
         FF_STRBUF_AUTO_DESTROY percentageStr = ffStrbufCreate();
-        ffPercentAppendNum(&percentageStr, device->volume, options->percent, false);
+        ffPercentAppendNum(&percentageStr, device->volume, options->percent, false, &options->moduleArgs);
 
         FF_PRINT_FORMAT_CHECKED(FF_SOUND_MODULE_NAME, index, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_SOUND_NUM_FORMAT_ARGS, ((FFformatarg[]) {
-            {FF_FORMAT_ARG_TYPE_BOOL, &device->main},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->name},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->identifier}
+            {FF_FORMAT_ARG_TYPE_BOOL, &device->main, "is-main"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->name, "name"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr, "volume-percentage"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->identifier, "identifier"},
         }));
     }
 }
@@ -226,10 +226,10 @@ void ffGenerateSoundJsonResult(FF_MAYBE_UNUSED FFSoundOptions* options, yyjson_m
 void ffPrintSoundHelpFormat(void)
 {
     FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_SOUND_MODULE_NAME, "{2} ({3}%)", FF_SOUND_NUM_FORMAT_ARGS, ((const char* []) {
-        "Is main sound device",
-        "Device name",
-        "Volume",
-        "Identifier"
+        "Is main sound device - is-main",
+        "Device name - name",
+        "Volume (in percentage) - volume-percentage",
+        "Identifier - identifier",
     }));
 }
 

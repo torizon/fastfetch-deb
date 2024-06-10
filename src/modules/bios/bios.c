@@ -44,7 +44,7 @@ void ffPrintBios(FFBiosOptions* options)
     {
         ffStrbufClear(&key);
         FF_PARSE_FORMAT_STRING_CHECKED(&key, &options->moduleArgs.key, 1, ((FFformatarg[]){
-            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.type},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.type, "type"},
         }));
     }
 
@@ -60,11 +60,11 @@ void ffPrintBios(FFBiosOptions* options)
     else
     {
         FF_PRINT_FORMAT_CHECKED(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_BIOS_NUM_FORMAT_ARGS, ((FFformatarg[]) {
-            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.date},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.release},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.vendor},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.version},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.type},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.date, "date"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.release, "release"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.vendor, "vendor"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.version, "version"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &bios.type, "type"},
         }));
     }
 
@@ -128,12 +128,6 @@ void ffGenerateBiosJsonResult(FF_MAYBE_UNUSED FFBiosOptions* options, yyjson_mut
         goto exit;
     }
 
-    if (bios.version.length == 0)
-    {
-        yyjson_mut_obj_add_str(doc, module, "error", "bios_version is not set.");
-        goto exit;
-    }
-
     yyjson_mut_val* obj = yyjson_mut_obj_add_obj(doc, module, "result");
     yyjson_mut_obj_add_strbuf(doc, obj, "date", &bios.date);
     yyjson_mut_obj_add_strbuf(doc, obj, "release", &bios.release);
@@ -152,11 +146,11 @@ exit:
 void ffPrintBiosHelpFormat(void)
 {
     FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_BIOS_MODULE_NAME, "{4} ({2})", FF_BIOS_NUM_FORMAT_ARGS, ((const char* []) {
-        "bios date",
-        "bios release",
-        "bios vendor",
-        "bios version",
-        "firmware type",
+        "bios date - date",
+        "bios release - release",
+        "bios vendor - vendor",
+        "bios version - version",
+        "firmware type - type",
     }));
 }
 
@@ -165,7 +159,7 @@ void ffInitBiosOptions(FFBiosOptions* options)
     ffOptionInitModuleBaseInfo(
         &options->moduleInfo,
         FF_BIOS_MODULE_NAME,
-        "Print BIOS name, version, release date, etc",
+        "Print information of 1st-stage bootloader (name, version, release date, etc)",
         ffParseBiosCommandOptions,
         ffParseBiosJsonObject,
         ffPrintBios,

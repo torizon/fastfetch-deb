@@ -141,11 +141,11 @@ static bool isValidNixPkg(FFstrbuf* pkg)
         switch (state)
         {
             case START:
-                if (c >= '0' && c <= '9')
+                if (ffCharIsDigit(c))
                     state = DIGIT;
                 break;
             case DIGIT:
-                if (c >= '0' && c <= '9')
+                if (ffCharIsDigit(c))
                     continue;
                 if (c == '.')
                     state = DOT;
@@ -153,7 +153,7 @@ static bool isValidNixPkg(FFstrbuf* pkg)
                     state = START;
                 break;
             case DOT:
-                if (c >= '0' && c <= '9')
+                if (ffCharIsDigit(c))
                     state = MATCH;
                 else
                     state = START;
@@ -408,10 +408,55 @@ static uint32_t getAM(FFstrbuf* baseDir)
     return result;
 }
 
+static int compareHash(const void* a, const void* b)
+{
+    return memcmp(a, b, 32);
+}
+
+static uint32_t getGuixPackagesImpl(char* filename)
+{
+    FF_STRBUF_AUTO_DESTROY content = ffStrbufCreate();
+    if (!ffAppendFileBuffer(filename, &content))
+        return 0;
+
+    // Count number of unique /gnu/store/ paths in PROFILE/manifest based on their hash value.
+    // Contains packages explicitly installed and their propagated inputs.
+    char* pend = content.chars;
+
+    for (const char* pattern = content.chars; (pattern = strstr(pattern, "/gnu/store/")); pattern += 32)
+    {
+        pattern += strlen("/gnu/store/");
+        memmove(pend, pattern, 32);
+        pend += 32;
+    }
+
+    if (pend == content.chars)
+        return 0;
+
+    qsort(content.chars, (size_t) (pend - content.chars) / 32, 32, compareHash);
+
+    uint32_t count = 1;
+    for (const char* p = content.chars + 32; p < pend; p += 32)
+        count += compareHash(p - 32, p) != 0;
+
+    return count;
+}
+
+static uint32_t getGuixPackages(FFstrbuf* baseDir, const char* dirname)
+{
+    uint32_t baseDirLength = baseDir->length;
+    ffStrbufAppendS(baseDir, dirname);
+    ffStrbufAppendS(baseDir, "/manifest");
+    uint32_t num_elements = getGuixPackagesImpl(baseDir->chars);
+    ffStrbufSubstrBefore(baseDir, baseDirLength);
+    return num_elements;
+}
+
 static void getPackageCounts(FFstrbuf* baseDir, FFPackagesResult* packageCounts, FFPackagesOptions* options)
 {
     if (!(options->disabled & FF_PACKAGES_FLAG_APK_BIT)) packageCounts->apk += getNumStrings(baseDir, "/lib/apk/db/installed", "C:Q");
     if (!(options->disabled & FF_PACKAGES_FLAG_DPKG_BIT)) packageCounts->dpkg += getNumStrings(baseDir, "/var/lib/dpkg/status", "Status: install ok installed");
+    if (!(options->disabled & FF_PACKAGES_FLAG_LPKG_BIT)) packageCounts->lpkg += getNumStrings(baseDir, "/opt/Loc-OS-LPKG/installed-lpkg/Listinstalled-lpkg.list", "\n");
     if (!(options->disabled & FF_PACKAGES_FLAG_EMERGE_BIT)) packageCounts->emerge += countFilesRecursive(baseDir, "/var/db/pkg", "SIZE");
     if (!(options->disabled & FF_PACKAGES_FLAG_EOPKG_BIT)) packageCounts->eopkg += getNumElements(baseDir, "/var/lib/eopkg/package", DT_DIR);
     if (!(options->disabled & FF_PACKAGES_FLAG_FLATPAK_BIT)) packageCounts->flatpakSystem += getFlatpak(baseDir, "/var/lib/flatpak");
@@ -421,6 +466,7 @@ static void getPackageCounts(FFstrbuf* baseDir, FFPackagesResult* packageCounts,
         packageCounts->nixSystem += getNixPackages(baseDir, "/run/current-system");
     }
     if (!(options->disabled & FF_PACKAGES_FLAG_PACMAN_BIT)) packageCounts->pacman += getNumElements(baseDir, "/var/lib/pacman/local", DT_DIR);
+    if (!(options->disabled & FF_PACKAGES_FLAG_LPKGBUILD_BIT)) packageCounts->lpkgbuild += getNumElements(baseDir, "/opt/Loc-OS-LPKG/lpkgbuild/remove", DT_REG);
     if (!(options->disabled & FF_PACKAGES_FLAG_PKGTOOL_BIT)) packageCounts->pkgtool += getNumElements(baseDir, "/var/log/packages", DT_REG);
     if (!(options->disabled & FF_PACKAGES_FLAG_RPM_BIT)) packageCounts->rpm += getSQLite3Int(baseDir, "/var/lib/rpm/rpmdb.sqlite", "SELECT count(*) FROM Packages");
     if (!(options->disabled & FF_PACKAGES_FLAG_SNAP_BIT)) packageCounts->snap += getSnap(baseDir);
@@ -434,6 +480,10 @@ static void getPackageCounts(FFstrbuf* baseDir, FFPackagesResult* packageCounts,
     if (!(options->disabled & FF_PACKAGES_FLAG_OPKG_BIT)) packageCounts->opkg += getNumStrings(baseDir, "/usr/lib/opkg/status", "Package:"); // openwrt
     if (!(options->disabled & FF_PACKAGES_FLAG_AM_BIT)) packageCounts->am = getAM(baseDir);
     if (!(options->disabled & FF_PACKAGES_FLAG_SORCERY_BIT)) packageCounts->sorcery += getNumStrings(baseDir, "/var/state/sorcery/packages", ":installed:");
+    if (!(options->disabled & FF_PACKAGES_FLAG_GUIX_BIT))
+    {
+      packageCounts->guixSystem += getGuixPackages(baseDir, "/run/current-system/profile");
+    }
 }
 
 static void getPackageCountsRegular(FFstrbuf* baseDir, FFPackagesResult* packageCounts, FFPackagesOptions* options)
@@ -508,30 +558,34 @@ void ffDetectPackagesImpl(FFPackagesResult* result, FFPackagesOptions* options)
         ffStrbufAppendS(&profilePath, ".nix-profile");
         if (ffPathExists(profilePath.chars, FF_PATHTYPE_DIRECTORY))
         {
-            result->nixUser = getNixPackages(&baseDir, ".nix-profile");
+            result->nixUser += getNixPackages(&baseDir, ".nix-profile");
         }
+
         // check if $XDG_STATE_HOME/nix/profile exists
+        FF_STRBUF_AUTO_DESTROY stateDir = ffStrbufCreate();
+        const char* stateHome = getenv("XDG_STATE_HOME");
+        if(ffStrSet(stateHome))
+        {
+            ffStrbufSetS(&stateDir, stateHome);
+            ffStrbufEnsureEndsWithC(&stateDir, '/');
+        }
         else
         {
-            FF_STRBUF_AUTO_DESTROY stateDir = ffStrbufCreate();
-            const char* stateHome = getenv("XDG_STATE_HOME");
-            if(ffStrSet(stateHome))
-            {
-                ffStrbufSetS(&stateDir, stateHome);
-                ffStrbufEnsureEndsWithC(&stateDir, '/');
-            }
-            else
-            {
-                ffStrbufSet(&stateDir, &instance.state.platform.homeDir);
-                ffStrbufAppendS(&stateDir, ".local/state/");
-            }
- 
-            ffStrbufSet(&profilePath, &stateDir);
-            ffStrbufAppendS(&profilePath, "nix/profile");
-            result->nixUser = getNixPackages(&stateDir, "nix/profile");
+            ffStrbufSet(&stateDir, &instance.state.platform.homeDir);
+            ffStrbufAppendS(&stateDir, ".local/state/");
         }
+
+        ffStrbufSet(&profilePath, &stateDir);
+        ffStrbufAppendS(&profilePath, "nix/profile");
+        result->nixUser += getNixPackages(&stateDir, "nix/profile");
     }
- 
+
+    if (!(options->disabled & FF_PACKAGES_FLAG_GUIX_BIT))
+    {
+       result->guixUser += getGuixPackages(&baseDir, ".guix-profile");
+       result->guixHome += getGuixPackages(&baseDir, ".guix-home/profile");
+    }
+
     if (!(options->disabled & FF_PACKAGES_FLAG_FLATPAK_BIT))
         result->flatpakUser = getFlatpak(&baseDir, "/.local/share/flatpak");
 }

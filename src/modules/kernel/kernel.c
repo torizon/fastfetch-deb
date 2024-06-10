@@ -11,7 +11,7 @@ void ffPrintKernel(FFKernelOptions* options)
     if(options->moduleArgs.outputFormat.length == 0)
     {
         ffPrintLogoAndKey(FF_KERNEL_MODULE_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
-        ffStrbufWriteTo(&platform->systemRelease, stdout);
+        printf("%s %s", platform->systemName.chars, platform->systemRelease.chars);
 
         if(platform->systemDisplayVersion.length > 0)
             printf(" (%s)\n", platform->systemDisplayVersion.chars);
@@ -21,11 +21,11 @@ void ffPrintKernel(FFKernelOptions* options)
     else
     {
         FF_PRINT_FORMAT_CHECKED(FF_KERNEL_MODULE_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_KERNEL_NUM_FORMAT_ARGS, ((FFformatarg[]){
-            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemName},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemRelease},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemVersion},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemArchitecture},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemDisplayVersion}
+            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemName, "sysname"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemRelease, "release"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemVersion, "version"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemArchitecture, "arch"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &platform->systemDisplayVersion, "display-version"},
         }));
     }
 }
@@ -77,12 +77,12 @@ void ffGenerateKernelJsonResult(FF_MAYBE_UNUSED FFKernelOptions* options, yyjson
 
 void ffPrintKernelHelpFormat(void)
 {
-    FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_KERNEL_MODULE_NAME, "{2}", FF_KERNEL_NUM_FORMAT_ARGS, ((const char* []) {
-        "Sysname",
-        "Release",
-        "Version",
-        "Architecture",
-        "Display version",
+    FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_KERNEL_MODULE_NAME, "{1} {2}", FF_KERNEL_NUM_FORMAT_ARGS, ((const char* []) {
+        "Sysname - sysname",
+        "Release - release",
+        "Version - version",
+        "Architecture - arch",
+        "Display version - display-version",
     }));
 }
 

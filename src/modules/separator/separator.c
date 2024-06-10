@@ -5,6 +5,8 @@
 #include "util/mallocHelper.h"
 #include "util/wcwidth.h"
 
+#include <locale.h>
+
 static inline uint32_t max(uint32_t a, uint32_t b)
 {
     return a > b ? a : b;
@@ -31,6 +33,7 @@ static inline uint32_t getWcsWidth(const FFstrbuf* mbstr, wchar_t* wstr, mbstate
 
 void ffPrintSeparator(FFSeparatorOptions* options)
 {
+    setlocale(LC_CTYPE, "");
     mbstate_t state = {};
     bool fqdn = instance.config.modules.title.fqdn;
     const FFPlatform* platform = &instance.state.platform;
@@ -43,6 +46,8 @@ void ffPrintSeparator(FFSeparatorOptions* options)
         + (fqdn ? platform->hostName.length : ffStrbufFirstIndexC(&platform->hostName, '.')); // host name
     ffLogoPrintLine();
 
+    if(options->outputColor.length)
+        ffPrintColor(&options->outputColor);
     if(__builtin_expect(options->string.length == 1, 1))
     {
         ffPrintCharTimes(options->string.chars[0], titleLength);
@@ -84,6 +89,7 @@ void ffPrintSeparator(FFSeparatorOptions* options)
         }
     }
     putchar('\n');
+    setlocale(LC_CTYPE, "C");
 }
 
 bool ffParseSeparatorCommandOptions(FFSeparatorOptions* options, const char* key, const char* value)
@@ -94,6 +100,12 @@ bool ffParseSeparatorCommandOptions(FFSeparatorOptions* options, const char* key
     if (ffStrEqualsIgnCase(subKey, "string"))
     {
         ffOptionParseString(key, value, &options->string);
+        return true;
+    }
+
+    if (ffStrEqualsIgnCase(subKey, "output-color"))
+    {
+        ffOptionParseColor(value, &options->outputColor);
         return true;
     }
 
@@ -113,6 +125,12 @@ void ffParseSeparatorJsonObject(FFSeparatorOptions* options, yyjson_val* module)
         if (ffStrEqualsIgnCase(key, "string"))
         {
             ffStrbufSetS(&options->string, yyjson_get_str(val));
+            continue;
+        }
+
+        if (ffStrEndsWithIgnCase(key, "outputColor"))
+        {
+            ffOptionParseColor(yyjson_get_str(val), &options->outputColor);
             continue;
         }
 

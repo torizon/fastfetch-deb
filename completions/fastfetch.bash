@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 __fastfetch_complete_help()
 {
     local __ff_helps=(
@@ -191,14 +189,13 @@ __fastfetch_completion()
         "--escape-bedrock"
         "--pipe"
         "--title-fqdn"
-        "--escape-bedrock"
         "--disk-folders"
         "--disk-show-external"
         "--disk-show-hidden"
         "--disk-show-subvolumes"
         "--gpu-hide-integrated"
         "--gpu-hide-discrete"
-        "--gpu-force-vulkan"
+        "--gpu-force-method"
         "--disk-show-unknown"
         "--bluetooth-show-disconnected"
     )
@@ -227,8 +224,6 @@ __fastfetch_completion()
         "--separator"
         "-s"
         "--structure"
-        "--set"
-        "--set-keyless"
         "--player-name"
         "--percent-type"
         "--publicip-url"

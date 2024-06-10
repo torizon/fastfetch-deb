@@ -8,9 +8,11 @@ typedef struct FFOptionsModules
     FFBiosOptions bios;
     FFBluetoothOptions bluetooth;
     FFBoardOptions board;
+    FFBootmgrOptions bootmgr;
     FFBreakOptions break_;
     FFBrightnessOptions brightness;
     FFCPUOptions cpu;
+    FFCPUCacheOptions cpuCache;
     FFCPUUsageOptions cpuUsage;
     FFCameraOptions camera;
     FFChassisOptions chassis;
@@ -23,13 +25,16 @@ typedef struct FFOptionsModules
     FFDiskOptions disk;
     FFDiskIOOptions diskIo;
     FFDisplayOptions display;
+    FFEditorOptions editor;
     FFFontOptions font;
     FFGPUOptions gpu;
     FFGamepadOptions gamepad;
     FFHostOptions host;
     FFIconsOptions icons;
+    FFInitSystemOptions initSystem;
     FFKernelOptions kernel;
     FFLMOptions lm;
+    FFLoadavgOptions loadavg;
     FFLocalIpOptions localIP;
     FFLocaleOptions locale;
     FFMediaOptions media;
@@ -41,6 +46,7 @@ typedef struct FFOptionsModules
     FFOpenGLOptions openGL;
     FFPackagesOptions packages;
     FFPhysicalDiskOptions physicalDisk;
+    FFPhysicalMemoryOptions physicalMemory;
     FFPlayerOptions player;
     FFPowerAdapterOptions powerAdapter;
     FFProcessesOptions processes;

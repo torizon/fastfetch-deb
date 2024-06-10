@@ -5,7 +5,7 @@
 #include "modules/bluetooth/bluetooth.h"
 #include "util/stringUtils.h"
 
-#define FF_BLUETOOTH_NUM_FORMAT_ARGS 4
+#define FF_BLUETOOTH_NUM_FORMAT_ARGS 5
 
 static void printDevice(FFBluetoothOptions* options, const FFBluetoothResult* device, uint8_t index)
 {
@@ -19,7 +19,7 @@ static void printDevice(FFBluetoothOptions* options, const FFBluetoothResult* de
         {
             if (buffer.length)
                 ffStrbufAppendC(&buffer, ' ');
-            ffPercentAppendNum(&buffer, device->battery, options->percent, buffer.length > 0);
+            ffPercentAppendNum(&buffer, device->battery, options->percent, buffer.length > 0, &options->moduleArgs);
         }
 
         if (!device->connected)
@@ -30,13 +30,14 @@ static void printDevice(FFBluetoothOptions* options, const FFBluetoothResult* de
     else
     {
         FF_STRBUF_AUTO_DESTROY percentageStr = ffStrbufCreate();
-        ffPercentAppendNum(&percentageStr, device->battery, options->percent, false);
+        ffPercentAppendNum(&percentageStr, device->battery, options->percent, false, &options->moduleArgs);
 
         FF_PRINT_FORMAT_CHECKED(FF_BLUETOOTH_MODULE_NAME, index, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_BLUETOOTH_NUM_FORMAT_ARGS, ((FFformatarg[]) {
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->name},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->address},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &device->type},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr}
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->name, "name"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->address, "address"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &device->type, "type"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr, "battery-percentage"},
+            {FF_FORMAT_ARG_TYPE_BOOL, &device->connected, "connected"},
         }));
     }
 }
@@ -174,10 +175,11 @@ void ffGenerateBluetoothJsonResult(FF_MAYBE_UNUSED FFBluetoothOptions* options, 
 void ffPrintBluetoothHelpFormat(void)
 {
     FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_BLUETOOTH_MODULE_NAME, "{1} ({4})", FF_BLUETOOTH_NUM_FORMAT_ARGS, ((const char* []) {
-        "Name",
-        "Address",
-        "Type",
-        "Battery percentage"
+        "Name - name",
+        "Address - address",
+        "Type - type",
+        "Battery percentage - battery-percentage",
+        "Is connected - connected",
     }));
 }
 

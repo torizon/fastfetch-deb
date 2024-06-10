@@ -1,6 +1,7 @@
 #include "battery.h"
 
 #include "common/io/io.h"
+#include "util/windows/nt.h"
 #include "util/windows/unicode.h"
 #include "util/mallocHelper.h"
 #include "util/smbiosHelper.h"
@@ -11,16 +12,6 @@
 #include <batclass.h>
 #include <devguid.h>
 #include <winternl.h>
-
-NTSYSCALLAPI
-NTSTATUS
-NTAPI
-NtPowerInformation(
-    IN POWER_INFORMATION_LEVEL InformationLevel,
-    IN PVOID InputBuffer OPTIONAL,
-    IN ULONG InputBufferLength,
-    OUT PVOID OutputBuffer OPTIONAL,
-    IN ULONG OutputBufferLength);
 
 static inline void wrapSetupDiDestroyDeviceInfoList(HDEVINFO* hdev)
 {
@@ -154,8 +145,6 @@ static const char* detectWithSetupApi(FFBatteryOptions* options, FFlist* results
     return NULL;
 }
 
-
-
 typedef struct FFSmbiosPortableBattery
 {
     FFSmbiosHeader Header;
@@ -178,11 +167,18 @@ typedef struct FFSmbiosPortableBattery
     uint8_t SbdsDeviceChemistry; // string
     uint8_t DesignCapacityMultiplier; // varies
     uint16_t OEMSpecific; // varies
-} FFSmbiosPortableBattery;
+} __attribute__((__packed__)) FFSmbiosPortableBattery;
+
+static_assert(offsetof(FFSmbiosPortableBattery, OEMSpecific) == 0x16,
+    "FFSmbiosPortableBattery: Wrong struct alignment");
 
 const char* detectBySmbios(FFBatteryResult* battery)
 {
-    const FFSmbiosPortableBattery* data = (const FFSmbiosPortableBattery*) (*ffGetSmbiosHeaderTable())[FF_SMBIOS_TYPE_PORTABLE_BATTERY];
+    const FFSmbiosHeaderTable* smbiosTable = ffGetSmbiosHeaderTable();
+    if (!smbiosTable)
+        return "Failed to get SMBIOS data";
+
+    const FFSmbiosPortableBattery* data = (const FFSmbiosPortableBattery*) (*smbiosTable)[FF_SMBIOS_TYPE_PORTABLE_BATTERY];
     if (!data)
         return "Portable battery section is not found in SMBIOS data";
 

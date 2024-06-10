@@ -48,6 +48,12 @@ const char* ffOptionsParseDisplayJsonConfig(FFOptionsDisplay* options, yyjson_va
                 const char* colorTitle = yyjson_get_str(yyjson_obj_get(val, "title"));
                 if (colorTitle)
                     ffOptionParseColor(colorTitle, &options->colorTitle);
+                const char* colorOutput = yyjson_get_str(yyjson_obj_get(val, "output"));
+                if (colorOutput)
+                    ffOptionParseColor(colorOutput, &options->colorOutput);
+                const char* colorSeparator = yyjson_get_str(yyjson_obj_get(val, "separator"));
+                if (colorSeparator)
+                    ffOptionParseColor(colorSeparator, &options->colorSeparator);
             }
             else
                 return "display.color must be either a string or an object";
@@ -113,7 +119,7 @@ const char* ffOptionsParseDisplayJsonConfig(FFOptionsDisplay* options, yyjson_va
                     {},
                 });
                 if (error) return error;
-                options->temperatureUnit = (FFTemperatureUnit) value;
+                options->tempUnit = (FFTemperatureUnit) value;
             }
 
             yyjson_val* ndigits = yyjson_obj_get(val, "ndigits");
@@ -174,9 +180,13 @@ const char* ffOptionsParseDisplayJsonConfig(FFOptionsDisplay* options, yyjson_va
                 if (charTotal)
                     ffStrbufSetS(&options->barCharTotal, charTotal);
 
-                yyjson_val* border = yyjson_obj_get(val, "border");
-                if (border)
-                    options->barBorder = yyjson_get_bool(border);
+                yyjson_val* borderLeft = yyjson_obj_get(val, "border-left");
+                if (borderLeft)
+                    ffStrbufSetS(&options->barBorderLeft, yyjson_get_str(borderLeft));
+
+                yyjson_val* borderRight = yyjson_obj_get(val, "border-right");
+                if (borderRight)
+                    ffStrbufSetS(&options->barBorderRight, yyjson_get_str(borderRight));
 
                 yyjson_val* width = yyjson_obj_get(val, "width");
                 if (width)
@@ -244,6 +254,16 @@ bool ffOptionsParseDisplayCommandLine(FFOptionsDisplay* options, const char* key
             optionCheckString(key, value, &options->colorTitle);
             ffOptionParseColor(value, &options->colorTitle);
         }
+        else if(ffStrEqualsIgnCase(subkey, "output"))
+        {
+            optionCheckString(key, value, &options->colorOutput);
+            ffOptionParseColor(value, &options->colorOutput);
+        }
+        else if(ffStrEqualsIgnCase(subkey, "separator"))
+        {
+            optionCheckString(key, value, &options->colorSeparator);
+            ffOptionParseColor(value, &options->colorSeparator);
+        }
         else
             return false;
     }
@@ -277,12 +297,12 @@ bool ffOptionsParseDisplayCommandLine(FFOptionsDisplay* options, const char* key
             {}
         });
     }
-    else if(ffStrStartsWithIgnCase(key, "--temperature-"))
+    else if(ffStrStartsWithIgnCase(key, "--temp-"))
     {
-        const char* subkey = key + strlen("--temperature-");
+        const char* subkey = key + strlen("--temp-");
         if(ffStrEqualsIgnCase(subkey, "unit"))
         {
-            options->temperatureUnit = (FFTemperatureUnit) ffOptionParseEnum(key, value, (FFKeyValuePair[]) {
+            options->tempUnit = (FFTemperatureUnit) ffOptionParseEnum(key, value, (FFKeyValuePair[]) {
                 { "CELSIUS", FF_TEMPERATURE_UNIT_CELSIUS },
                 { "C", FF_TEMPERATURE_UNIT_CELSIUS },
                 { "FAHRENHEIT", FF_TEMPERATURE_UNIT_FAHRENHEIT },
@@ -330,8 +350,10 @@ bool ffOptionsParseDisplayCommandLine(FFOptionsDisplay* options, const char* key
             ffOptionParseString(key, value, &options->barCharTotal);
         else if(ffStrEqualsIgnCase(subkey, "width"))
             options->barWidth = (uint8_t) ffOptionParseUInt32(key, value);
-        else if(ffStrEqualsIgnCase(subkey, "border"))
-            options->barBorder = ffOptionParseBoolean(value);
+        else if(ffStrEqualsIgnCase(subkey, "border-left"))
+            ffOptionParseString(key, value, &options->barBorderLeft);
+        else if(ffStrEqualsIgnCase(subkey, "border-right"))
+            ffOptionParseString(key, value, &options->barBorderRight);
         else
             return false;
     }
@@ -346,7 +368,9 @@ void ffOptionsInitDisplay(FFOptionsDisplay* options)
 {
     ffStrbufInit(&options->colorKeys);
     ffStrbufInit(&options->colorTitle);
-    options->brightColor = true;
+    ffStrbufInit(&options->colorOutput);
+    ffStrbufInit(&options->colorSeparator);
+    options->brightColor = !instance.state.terminalLightTheme;
     ffStrbufInitStatic(&options->keyValueSeparator, ": ");
 
     options->showErrors = false;
@@ -366,21 +390,22 @@ void ffOptionsInitDisplay(FFOptionsDisplay* options)
     options->noBuffer = false;
     options->keyWidth = 0;
 
-    options->temperatureUnit = FF_TEMPERATURE_UNIT_CELSIUS;
+    options->tempUnit = FF_TEMPERATURE_UNIT_CELSIUS;
     options->tempNdigits = 1;
     ffStrbufInitStatic(&options->tempColorGreen, FF_COLOR_FG_GREEN);
-    ffStrbufInitStatic(&options->tempColorYellow, FF_COLOR_FG_LIGHT_YELLOW);
-    ffStrbufInitStatic(&options->tempColorRed, FF_COLOR_FG_LIGHT_RED);
+    ffStrbufInitStatic(&options->tempColorYellow, instance.state.terminalLightTheme ? FF_COLOR_FG_YELLOW : FF_COLOR_FG_LIGHT_YELLOW);
+    ffStrbufInitStatic(&options->tempColorRed, instance.state.terminalLightTheme ? FF_COLOR_FG_RED : FF_COLOR_FG_LIGHT_RED);
 
     ffStrbufInitStatic(&options->barCharElapsed, "■");
     ffStrbufInitStatic(&options->barCharTotal, "-");
+    ffStrbufInitStatic(&options->barBorderLeft, "[ ");
+    ffStrbufInitStatic(&options->barBorderRight, " ]");
     options->barWidth = 10;
-    options->barBorder = true;
     options->percentType = 9;
     options->percentNdigits = 0;
     ffStrbufInitStatic(&options->percentColorGreen, FF_COLOR_FG_GREEN);
-    ffStrbufInitStatic(&options->percentColorYellow, FF_COLOR_FG_LIGHT_YELLOW);
-    ffStrbufInitStatic(&options->percentColorRed, FF_COLOR_FG_LIGHT_RED);
+    ffStrbufInitStatic(&options->percentColorYellow, instance.state.terminalLightTheme ? FF_COLOR_FG_YELLOW : FF_COLOR_FG_LIGHT_YELLOW);
+    ffStrbufInitStatic(&options->percentColorRed, instance.state.terminalLightTheme ? FF_COLOR_FG_RED : FF_COLOR_FG_LIGHT_RED);
 
     options->tsVersion = true;
 }
@@ -389,6 +414,8 @@ void ffOptionsDestroyDisplay(FFOptionsDisplay* options)
 {
     ffStrbufDestroy(&options->colorKeys);
     ffStrbufDestroy(&options->colorTitle);
+    ffStrbufDestroy(&options->colorOutput);
+    ffStrbufDestroy(&options->colorSeparator);
     ffStrbufDestroy(&options->keyValueSeparator);
     ffStrbufDestroy(&options->barCharElapsed);
     ffStrbufDestroy(&options->barCharTotal);
@@ -425,6 +452,10 @@ void ffOptionsGenerateDisplayJsonConfig(FFOptionsDisplay* options, yyjson_mut_do
             yyjson_mut_obj_add_strbuf(doc, color, "keys", &options->colorKeys);
         if (!ffStrbufEqual(&options->colorTitle, &defaultOptions.colorTitle))
             yyjson_mut_obj_add_strbuf(doc, color, "title", &options->colorTitle);
+        if (!ffStrbufEqual(&options->colorOutput, &defaultOptions.colorOutput))
+            yyjson_mut_obj_add_strbuf(doc, color, "output", &options->colorOutput);
+        if (!ffStrbufEqual(&options->colorSeparator, &defaultOptions.colorSeparator))
+            yyjson_mut_obj_add_strbuf(doc, color, "separator", &options->colorSeparator);
         if (yyjson_mut_obj_size(color) > 0)
         {
             if (yyjson_mut_obj_size(color) == 2 && ffStrbufEqual(&options->colorKeys, &options->colorTitle))
@@ -478,9 +509,9 @@ void ffOptionsGenerateDisplayJsonConfig(FFOptionsDisplay* options, yyjson_mut_do
 
     {
         yyjson_mut_val* temperature = yyjson_mut_obj(doc);
-        if (options->temperatureUnit != defaultOptions.temperatureUnit)
+        if (options->tempUnit != defaultOptions.tempUnit)
         {
-            switch (options->temperatureUnit)
+            switch (options->tempUnit)
             {
                 case FF_TEMPERATURE_UNIT_CELSIUS:
                     yyjson_mut_obj_add_str(doc, obj, "unit", "C");
@@ -537,8 +568,10 @@ void ffOptionsGenerateDisplayJsonConfig(FFOptionsDisplay* options, yyjson_mut_do
             yyjson_mut_obj_add_strbuf(doc, bar, "charElapsed", &options->barCharElapsed);
         if (!ffStrbufEqual(&options->barCharTotal, &defaultOptions.barCharTotal))
             yyjson_mut_obj_add_strbuf(doc, bar, "charTotal", &options->barCharTotal);
-        if (options->barBorder != defaultOptions.barBorder)
-            yyjson_mut_obj_add_bool(doc, bar, "border", options->barBorder);
+        if (!ffStrbufEqual(&options->barBorderLeft, &defaultOptions.barBorderLeft))
+            yyjson_mut_obj_add_strbuf(doc, bar, "borderLeft", &options->barBorderLeft);
+        if (!ffStrbufEqual(&options->barBorderRight, &defaultOptions.barBorderRight))
+            yyjson_mut_obj_add_strbuf(doc, bar, "borderRight", &options->barBorderRight);
         if (options->barWidth != defaultOptions.barWidth)
             yyjson_mut_obj_add_uint(doc, bar, "width", options->barWidth);
 

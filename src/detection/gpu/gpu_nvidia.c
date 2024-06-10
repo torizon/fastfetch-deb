@@ -1,7 +1,7 @@
 #include "gpu_driver_specific.h"
 
-#include "3rdparty/nvml/nvml.h"
 #include "common/library.h"
+#include "nvml.h"
 
 struct FFNvmlData {
     FF_LIBRARY_SYMBOL(nvmlDeviceGetCount_v2)
@@ -19,6 +19,8 @@ struct FFNvmlData {
 
 const char* ffDetectNvidiaGpuInfo(const FFGpuDriverCondition* cond, FFGpuDriverResult result, const char* soName)
 {
+#ifndef FF_DISABLE_DLOPEN
+
     if (!nvmlData.inited)
     {
         nvmlData.inited = true;
@@ -127,4 +129,11 @@ const char* ffDetectNvidiaGpuInfo(const FFGpuDriverCondition* cond, FFGpuDriverR
     }
 
     return NULL;
+
+#else
+
+    FF_UNUSED(cond, result, soName);
+    return "dlopen is disabled";
+
+#endif
 }
