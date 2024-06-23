@@ -1,3 +1,9 @@
+fastfetch (2.15.0+dfsg-2) UNRELEASED; urgency=medium
+
+  * Source only upload.
+
+ -- Hiago De Franco <hiagofranco@gmail.com>  Sat, 22 Jun 2024 21:03:27 -0300
+
 fastfetch (2.15.0+dfsg-1) unstable; urgency=medium
 
   * Initial release. (Closes: #1053995)
