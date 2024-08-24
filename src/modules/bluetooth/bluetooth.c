@@ -5,7 +5,7 @@
 #include "modules/bluetooth/bluetooth.h"
 #include "util/stringUtils.h"
 
-#define FF_BLUETOOTH_NUM_FORMAT_ARGS 5
+#define FF_BLUETOOTH_NUM_FORMAT_ARGS 6
 
 static void printDevice(FFBluetoothOptions* options, const FFBluetoothResult* device, uint8_t index)
 {
@@ -29,15 +29,18 @@ static void printDevice(FFBluetoothOptions* options, const FFBluetoothResult* de
     }
     else
     {
-        FF_STRBUF_AUTO_DESTROY percentageStr = ffStrbufCreate();
-        ffPercentAppendNum(&percentageStr, device->battery, options->percent, false, &options->moduleArgs);
+        FF_STRBUF_AUTO_DESTROY percentageNum = ffStrbufCreate();
+        ffPercentAppendNum(&percentageNum, device->battery, options->percent, false, &options->moduleArgs);
+        FF_STRBUF_AUTO_DESTROY percentageBar = ffStrbufCreate();
+        ffPercentAppendBar(&percentageBar, device->battery, options->percent, &options->moduleArgs);
 
         FF_PRINT_FORMAT_CHECKED(FF_BLUETOOTH_MODULE_NAME, index, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_BLUETOOTH_NUM_FORMAT_ARGS, ((FFformatarg[]) {
             {FF_FORMAT_ARG_TYPE_STRBUF, &device->name, "name"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &device->address, "address"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &device->type, "type"},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageStr, "battery-percentage"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageNum, "battery-percentage"},
             {FF_FORMAT_ARG_TYPE_BOOL, &device->connected, "connected"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &percentageBar, "battery-percentage-bar"},
         }));
     }
 }
@@ -175,11 +178,12 @@ void ffGenerateBluetoothJsonResult(FF_MAYBE_UNUSED FFBluetoothOptions* options, 
 void ffPrintBluetoothHelpFormat(void)
 {
     FF_PRINT_MODULE_FORMAT_HELP_CHECKED(FF_BLUETOOTH_MODULE_NAME, "{1} ({4})", FF_BLUETOOTH_NUM_FORMAT_ARGS, ((const char* []) {
-        "Name - name",
-        "Address - address",
+        "Name - device name",
+        "Address - remote device address",
         "Type - type",
-        "Battery percentage - battery-percentage",
+        "Battery percentage number - battery-percentage",
         "Is connected - connected",
+        "Battery percentage bar - battery-percentage-bar",
     }));
 }
 
@@ -188,7 +192,7 @@ void ffInitBluetoothOptions(FFBluetoothOptions* options)
     ffOptionInitModuleBaseInfo(
         &options->moduleInfo,
         FF_BLUETOOTH_MODULE_NAME,
-        "List bluetooth devices",
+        "List (connected) bluetooth devices",
         ffParseBluetoothCommandOptions,
         ffParseBluetoothJsonObject,
         ffPrintBluetooth,
@@ -196,7 +200,7 @@ void ffInitBluetoothOptions(FFBluetoothOptions* options)
         ffPrintBluetoothHelpFormat,
         ffGenerateBluetoothJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "");
     options->showDisconnected = false;
     options->percent = (FFColorRangeConfig) { 50, 20 };
 }

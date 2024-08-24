@@ -176,7 +176,6 @@ void ffGenerateTitleJsonResult(FF_MAYBE_UNUSED FFTitleOptions* options, yyjson_m
     yyjson_mut_obj_add_strbuf(doc, obj, "homeDir", &instance.state.platform.homeDir);
     yyjson_mut_obj_add_strbuf(doc, obj, "exePath", &instance.state.platform.exePath);
     yyjson_mut_obj_add_strbuf(doc, obj, "userShell", &instance.state.platform.userShell);
-    yyjson_mut_obj_add_uint(doc, obj, "pageSize", instance.state.platform.pageSize);
 }
 
 void ffPrintTitleHelpFormat(void)
@@ -206,7 +205,7 @@ void ffInitTitleOptions(FFTitleOptions* options)
         ffPrintTitleHelpFormat,
         ffGenerateTitleJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "");
     ffStrbufSetStatic(&options->moduleArgs.key, " ");
 
     options->fqdn = false;

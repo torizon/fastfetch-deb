@@ -4,6 +4,7 @@
 #include "util/stringUtils.h"
 #include "util/mallocHelper.h"
 #include "util/wcwidth.h"
+#include "util/textModifier.h"
 
 #include <locale.h>
 
@@ -33,6 +34,23 @@ static inline uint32_t getWcsWidth(const FFstrbuf* mbstr, wchar_t* wstr, mbstate
 
 void ffPrintSeparator(FFSeparatorOptions* options)
 {
+    ffLogoPrintLine();
+
+    if (options->length > 0)
+    {
+        if(__builtin_expect(options->string.length == 1, 1))
+            ffPrintCharTimes(options->string.chars[0], options->length);
+        else
+        {
+            for (uint32_t i = 0; i < options->length; i++)
+            {
+                fputs(options->string.chars, stdout);
+            }
+        }
+        putchar('\n');
+        return;
+    }
+
     setlocale(LC_CTYPE, "");
     mbstate_t state = {};
     bool fqdn = instance.config.modules.title.fqdn;
@@ -44,9 +62,8 @@ void ffPrintSeparator(FFSeparatorOptions* options)
     uint32_t titleLength = 1 // @
         + getWcsWidth(&platform->userName, wstr, &state) // user name
         + (fqdn ? platform->hostName.length : ffStrbufFirstIndexC(&platform->hostName, '.')); // host name
-    ffLogoPrintLine();
 
-    if(options->outputColor.length)
+    if(options->outputColor.length && !instance.config.display.pipe)
         ffPrintColor(&options->outputColor);
     if(__builtin_expect(options->string.length == 1, 1))
     {
@@ -88,6 +105,8 @@ void ffPrintSeparator(FFSeparatorOptions* options)
             }
         }
     }
+    if(options->outputColor.length && !instance.config.display.pipe)
+        fputs(FASTFETCH_TEXT_MODIFIER_RESET, stdout);
     putchar('\n');
     setlocale(LC_CTYPE, "C");
 }
@@ -106,6 +125,12 @@ bool ffParseSeparatorCommandOptions(FFSeparatorOptions* options, const char* key
     if (ffStrEqualsIgnCase(subKey, "output-color"))
     {
         ffOptionParseColor(value, &options->outputColor);
+        return true;
+    }
+
+    if (ffStrEqualsIgnCase(subKey, "length"))
+    {
+        options->length = ffOptionParseUInt32(key, value);
         return true;
     }
 
@@ -131,6 +156,12 @@ void ffParseSeparatorJsonObject(FFSeparatorOptions* options, yyjson_val* module)
         if (ffStrEndsWithIgnCase(key, "outputColor"))
         {
             ffOptionParseColor(yyjson_get_str(val), &options->outputColor);
+            continue;
+        }
+
+        if (ffStrEndsWithIgnCase(key, "length"))
+        {
+            options->length = (uint32_t) yyjson_get_uint(val);
             continue;
         }
 
@@ -161,6 +192,8 @@ void ffInitSeparatorOptions(FFSeparatorOptions* options)
         ffGenerateSeparatorJsonConfig
     );
     ffStrbufInitStatic(&options->string, "-");
+    ffStrbufInit(&options->outputColor);
+    options->length = 0;
 }
 
 void ffDestroySeparatorOptions(FFSeparatorOptions* options)

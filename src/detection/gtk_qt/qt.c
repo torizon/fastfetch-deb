@@ -135,6 +135,34 @@ static void detectLXQt(FFQtResult* result)
     ffParsePropFileConfig("pcmanfm-qt/lxqt/settings.conf", "Wallpaper=", &result->wallpaper);
 }
 
+static void detectQtCt(char qver, FFQtResult* result)
+{
+    // qt5ct and qt6ct are technically separate applications, but they're both
+    // by the same author and qt6ct understands qt5ct in qt6 applications as well.
+    char file[] = "qtXct/qtXct.conf";
+    file[2] = file[8] = qver;
+    ffParsePropFileConfigValues(file, 3, (FFpropquery[]) {
+        {"style=", &result->widgetStyle},
+        {"icon_theme=", &result->icons},
+        {"general=", &result->font}
+    });
+
+    if (ffStrbufStartsWithC(&result->font, '@'))
+    {
+        // See QVariant notes on https://doc.qt.io/qt-5/qsettings.html and
+        // https://github.com/fastfetch-cli/fastfetch/issues/1053#issuecomment-2197254769
+        // Thankfully, newer versions use the more common font encoding.
+        ffStrbufSetNS(&result->font, 5, file);
+    }
+}
+
+static void detectKvantum(FFQtResult* result)
+{
+    ffParsePropFileConfigValues("Kvantum/kvantum.kvconfig", 1, (FFpropquery[]) {
+        {"theme=", &result->widgetStyle},
+    });
+}
+
 const FFQtResult* ffDetectQt(void)
 {
     static FFQtResult result;
@@ -151,11 +179,20 @@ const FFQtResult* ffDetectQt(void)
     ffStrbufInit(&result.wallpaper);
 
     const FFDisplayServerResult* wmde = ffConnectDisplayServer();
+    const char *qplatformtheme = getenv("QT_QPA_PLATFORMTHEME");
 
     if(ffStrbufIgnCaseEqualS(&wmde->dePrettyName, FF_DE_PRETTY_PLASMA))
         detectPlasma(&result);
     else if(ffStrbufIgnCaseEqualS(&wmde->dePrettyName, FF_DE_PRETTY_LXQT))
         detectLXQt(&result);
+    else if(ffStrSet(qplatformtheme) && (ffStrEquals(qplatformtheme, "qt5ct") || ffStrEquals(qplatformtheme, "qt6ct")))
+        detectQtCt(qplatformtheme[2], &result);
+
+    if(ffStrbufEqualS(&result.widgetStyle, "kvantum") || ffStrbufEqualS(&result.widgetStyle, "kvantum-dark"))
+    {
+        ffStrbufClear(&result.widgetStyle);
+        detectKvantum(&result);
+    }
 
     return &result;
 }

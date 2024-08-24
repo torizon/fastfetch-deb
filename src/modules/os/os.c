@@ -11,7 +11,6 @@
 
 static void buildOutputDefault(const FFOSResult* os, FFstrbuf* result)
 {
-    // asm ("int3");
     //Create the basic output
     if(os->name.length > 0)
         ffStrbufAppend(result, &os->name);
@@ -20,7 +19,7 @@ static void buildOutputDefault(const FFOSResult* os, FFstrbuf* result)
     else if(os->id.length > 0)
         ffStrbufAppend(result, &os->id);
     else
-        ffStrbufAppend(result, &instance.state.platform.systemName);
+        ffStrbufAppend(result, &instance.state.platform.sysinfo.name);
 
     //Append code name if it is missing
     if(os->codename.length > 0 && !ffStrbufContainIgnCase(result, &os->codename))
@@ -56,10 +55,10 @@ static void buildOutputDefault(const FFOSResult* os, FFstrbuf* result)
     }
 
     //Append architecture if it is missing
-    if(!ffStrbufContainIgnCase(result, &instance.state.platform.systemArchitecture))
+    if(!ffStrbufContainIgnCase(result, &instance.state.platform.sysinfo.architecture))
     {
         ffStrbufAppendC(result, ' ');
-        ffStrbufAppend(result, &instance.state.platform.systemArchitecture);
+        ffStrbufAppend(result, &instance.state.platform.sysinfo.architecture);
     }
 }
 
@@ -81,10 +80,10 @@ static void buildOutputNixOS(const FFOSResult* os, FFstrbuf* result)
         ffStrbufAppendC(result, ')');
     }
 
-    if(instance.state.platform.systemArchitecture.length > 0)
+    if(instance.state.platform.sysinfo.architecture.length > 0)
     {
         ffStrbufAppendC(result, ' ');
-        ffStrbufAppend(result, &instance.state.platform.systemArchitecture);
+        ffStrbufAppend(result, &instance.state.platform.sysinfo.architecture);
     }
 }
 
@@ -113,7 +112,7 @@ void ffPrintOS(FFOSOptions* options)
     else
     {
         FF_PRINT_FORMAT_CHECKED(FF_OS_MODULE_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_OS_NUM_FORMAT_ARGS, ((FFformatarg[]){
-            {FF_FORMAT_ARG_TYPE_STRBUF, &instance.state.platform.systemName, "sysname"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &instance.state.platform.sysinfo.name, "sysname"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &os->name, "name"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &os->prettyName, "pretty-name"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &os->id, "id"},
@@ -124,7 +123,7 @@ void ffPrintOS(FFOSOptions* options)
             {FF_FORMAT_ARG_TYPE_STRBUF, &os->versionID, "version-id"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &os->codename, "codename"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &os->buildID, "build-id"},
-            {FF_FORMAT_ARG_TYPE_STRBUF, &instance.state.platform.systemArchitecture, "arch"}
+            {FF_FORMAT_ARG_TYPE_STRBUF, &instance.state.platform.sysinfo.architecture, "arch"}
         }));
     }
 }
@@ -218,7 +217,23 @@ void ffInitOSOptions(FFOSOptions* options)
         ffPrintOSHelpFormat,
         ffGenerateOSJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs,
+        #ifdef _WIN32
+            ""
+        #elif __APPLE__
+            ""
+        #elif __FreeBSD__
+            "󰣠"
+        #elif __linux__
+            ""
+        #elif __ANDROID__
+            ""
+        #elif __sun
+            ""
+        #else
+            "?"
+        #endif
+    );
 }
 
 void ffDestroyOSOptions(FFOSOptions* options)

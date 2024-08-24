@@ -43,14 +43,15 @@ void ffPrintBios(FFBiosOptions* options)
     else
     {
         ffStrbufClear(&key);
-        FF_PARSE_FORMAT_STRING_CHECKED(&key, &options->moduleArgs.key, 1, ((FFformatarg[]){
+        FF_PARSE_FORMAT_STRING_CHECKED(&key, &options->moduleArgs.key, 2, ((FFformatarg[]){
             {FF_FORMAT_ARG_TYPE_STRBUF, &bios.type, "type"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &options->moduleArgs.keyIcon, "icon"},
         }));
     }
 
     if(options->moduleArgs.outputFormat.length == 0)
     {
-        ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
+        ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY);
         ffStrbufWriteTo(&bios.version, stdout);
         if (bios.release.length)
             printf(" (%s)\n", bios.release.chars);
@@ -59,7 +60,7 @@ void ffPrintBios(FFBiosOptions* options)
     }
     else
     {
-        FF_PRINT_FORMAT_CHECKED(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_BIOS_NUM_FORMAT_ARGS, ((FFformatarg[]) {
+        FF_PRINT_FORMAT_CHECKED(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY, FF_BIOS_NUM_FORMAT_ARGS, ((FFformatarg[]) {
             {FF_FORMAT_ARG_TYPE_STRBUF, &bios.date, "date"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &bios.release, "release"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &bios.vendor, "vendor"},
@@ -167,7 +168,7 @@ void ffInitBiosOptions(FFBiosOptions* options)
         ffPrintBiosHelpFormat,
         ffGenerateBiosJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "");
 }
 
 void ffDestroyBiosOptions(FFBiosOptions* options)

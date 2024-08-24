@@ -20,8 +20,13 @@ void ffPrintPhysicalMemory(FFPhysicalMemoryOptions* options)
         return;
     }
 
+    if (result.length == 0)
+    {
+        ffPrintError(FF_PHYSICALMEMORY_DISPLAY_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, "No physical memory detected");
+        return;
+    }
+
     FF_STRBUF_AUTO_DESTROY prettySize = ffStrbufCreate();
-    FF_STRBUF_AUTO_DESTROY key = ffStrbufCreate();
 
     uint32_t i = 0;
     FF_LIST_FOR_EACH(FFPhysicalMemoryResult, device, result)
@@ -32,11 +37,7 @@ void ffPrintPhysicalMemory(FFPhysicalMemoryOptions* options)
 
         if (options->moduleArgs.outputFormat.length == 0)
         {
-            ffPrintLogoAndKey(
-                FF_PHYSICALMEMORY_DISPLAY_NAME,
-                result.length == 1 ? 0 : (uint8_t) i,
-                &options->moduleArgs,
-                FF_PRINT_TYPE_DEFAULT);
+            ffPrintLogoAndKey(FF_PHYSICALMEMORY_DISPLAY_NAME, result.length == 1 ? 0 : (uint8_t) i, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
 
             fputs(prettySize.chars, stdout);
             fputs(" - ", stdout);
@@ -53,7 +54,7 @@ void ffPrintPhysicalMemory(FFPhysicalMemoryOptions* options)
         }
         else
         {
-            FF_PRINT_FORMAT_CHECKED(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_PHYSICALMEMORY_NUM_FORMAT_ARGS, ((FFformatarg[]) {
+            FF_PRINT_FORMAT_CHECKED(FF_PHYSICALMEMORY_DISPLAY_NAME, (uint8_t) i, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_PHYSICALMEMORY_NUM_FORMAT_ARGS, ((FFformatarg[]) {
                 {FF_FORMAT_ARG_TYPE_UINT64, &device->size, "bytes"},
                 {FF_FORMAT_ARG_TYPE_STRBUF, &prettySize, "size"},
                 {FF_FORMAT_ARG_TYPE_UINT, &device->maxSpeed, "max-speed"},
@@ -183,7 +184,7 @@ void ffInitPhysicalMemoryOptions(FFPhysicalMemoryOptions* options)
         ffPrintPhysicalMemoryHelpFormat,
         ffGeneratePhysicalMemoryJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "󰑭");
 }
 
 void ffDestroyPhysicalMemoryOptions(FFPhysicalMemoryOptions* options)

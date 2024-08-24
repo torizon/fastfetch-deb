@@ -26,6 +26,8 @@ const char* ffDetectEditor(FFEditorResult* result)
             return "$VISUAL or $EDITOR not set";
     }
 
+    if (!instance.config.general.detectVersion) return NULL;
+
     #ifndef _WIN32
     if (result->name.chars[0] != '/')
     {
@@ -90,6 +92,7 @@ const char* ffDetectEditor(FFEditorResult* result)
         ffStrbufStartsWithS(&result->exe, "emacs-") || // emacs-29.3
         ffStrbufEqualS(&result->exe, "hx") ||
         ffStrbufEqualS(&result->exe, "code") ||
+        ffStrbufEqualS(&result->exe, "pluma") ||
         ffStrbufEqualS(&result->exe, "sublime_text")
     ) param = "--version";
     else if (

@@ -8,6 +8,7 @@ static FFModuleBaseInfo* B[] = {
     (void*) &instance.config.modules.battery,
     (void*) &instance.config.modules.bios,
     (void*) &instance.config.modules.bluetooth,
+    (void*) &instance.config.modules.bluetoothRadio,
     (void*) &instance.config.modules.board,
     (void*) &instance.config.modules.bootmgr,
     (void*) &instance.config.modules.break_,
@@ -34,6 +35,7 @@ static FFModuleBaseInfo* D[] = {
     (void*) &instance.config.modules.display,
     (void*) &instance.config.modules.disk,
     (void*) &instance.config.modules.diskIo,
+    (void*) &instance.config.modules.dns,
     NULL,
 };
 
