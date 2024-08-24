@@ -6,6 +6,7 @@ void ffOptionsInitModules(FFOptionsModules* options)
     ffInitBatteryOptions(&options->battery);
     ffInitBiosOptions(&options->bios);
     ffInitBluetoothOptions(&options->bluetooth);
+    ffInitBluetoothRadioOptions(&options->bluetoothRadio);
     ffInitBoardOptions(&options->board);
     ffInitBootmgrOptions(&options->bootmgr);
     ffInitBreakOptions(&options->break_);
@@ -24,6 +25,7 @@ void ffOptionsInitModules(FFOptionsModules* options)
     ffInitDiskOptions(&options->disk);
     ffInitDiskIOOptions(&options->diskIo);
     ffInitDisplayOptions(&options->display);
+    ffInitDNSOptions(&options->dns);
     ffInitEditorOptions(&options->editor);
     ffInitFontOptions(&options->font);
     ffInitGPUOptions(&options->gpu);
@@ -76,6 +78,7 @@ void ffOptionsDestroyModules(FFOptionsModules* options)
     ffDestroyBatteryOptions(&options->battery);
     ffDestroyBiosOptions(&options->bios);
     ffDestroyBluetoothOptions(&options->bluetooth);
+    ffDestroyBluetoothRadioOptions(&options->bluetoothRadio);
     ffDestroyBoardOptions(&options->board);
     ffDestroyBootmgrOptions(&options->bootmgr);
     ffDestroyBreakOptions(&options->break_);
@@ -94,6 +97,7 @@ void ffOptionsDestroyModules(FFOptionsModules* options)
     ffDestroyDiskOptions(&options->disk);
     ffDestroyDiskIOOptions(&options->diskIo);
     ffDestroyDisplayOptions(&options->display);
+    ffDestroyDNSOptions(&options->dns);
     ffDestroyEditorOptions(&options->editor);
     ffDestroyFontOptions(&options->font);
     ffDestroyGPUOptions(&options->gpu);

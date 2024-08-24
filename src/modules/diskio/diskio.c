@@ -22,10 +22,11 @@ static void formatKey(const FFDiskIOOptions* options, FFDiskIOResult* dev, uint3
     else
     {
         ffStrbufClear(key);
-        FF_PARSE_FORMAT_STRING_CHECKED(key, &options->moduleArgs.key, 3, ((FFformatarg[]){
+        FF_PARSE_FORMAT_STRING_CHECKED(key, &options->moduleArgs.key, 4, ((FFformatarg[]){
             {FF_FORMAT_ARG_TYPE_UINT, &index, "index"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &dev->name, "name"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &dev->devPath, "dev-path"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &options->moduleArgs.keyIcon, "icon"},
         }));
     }
 }
@@ -37,7 +38,7 @@ void ffPrintDiskIO(FFDiskIOOptions* options)
 
     if(error)
     {
-        ffPrintError(FF_DISKIO_DISPLAY_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, "%s", error);
+        ffPrintError(FF_DISKIO_DISPLAY_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY, "%s", error);
         return;
     }
 
@@ -55,7 +56,7 @@ void ffPrintDiskIO(FFDiskIOOptions* options)
 
         if(options->moduleArgs.outputFormat.length == 0)
         {
-            ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
+            ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY);
 
             ffParseSize(dev->bytesRead, &buffer);
             if (!options->detectTotal) ffStrbufAppendS(&buffer, "/s");
@@ -217,7 +218,7 @@ void ffInitDiskIOOptions(FFDiskIOOptions* options)
         ffPrintDiskIOHelpFormat,
         ffGenerateDiskIOJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "󰓅");
 
     ffStrbufInit(&options->namePrefix);
     options->detectTotal = false;

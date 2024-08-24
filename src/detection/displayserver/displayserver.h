@@ -9,7 +9,7 @@
 #define FF_DE_PRETTY_CINNAMON "Cinnamon"
 #define FF_DE_PRETTY_MATE "Mate"
 #define FF_DE_PRETTY_LXDE "LXDE"
-#define FF_DE_PRETTY_LXQT "LXQT"
+#define FF_DE_PRETTY_LXQT "LXQt"
 #define FF_DE_PRETTY_BUDGIE "Budgie"
 #define FF_DE_PRETTY_CDE "CDE"
 #define FF_DE_PRETTY_UNITY "Unity"
@@ -58,8 +58,12 @@ typedef struct FFDisplayResult
     FFstrbuf name;
     FFDisplayType type;
     uint32_t rotation;
-    bool primary;
     uint64_t id; // platform dependent
+    uint32_t physicalWidth;
+    uint32_t physicalHeight;
+    bool primary;
+    uint8_t bitDepth;
+    bool hdrEnabled;
 } FFDisplayResult;
 
 typedef struct FFDisplayServerResult
@@ -74,7 +78,7 @@ typedef struct FFDisplayServerResult
 
 const FFDisplayServerResult* ffConnectDisplayServer();
 
-bool ffdsAppendDisplay(
+FFDisplayResult* ffdsAppendDisplay(
     FFDisplayServerResult* result,
     uint32_t width,
     uint32_t height,
@@ -85,4 +89,6 @@ bool ffdsAppendDisplay(
     FFstrbuf* name,
     FFDisplayType type,
     bool primary,
-    uint64_t id);
+    uint64_t id,
+    uint32_t physicalWidth,
+    uint32_t physicalHeight);

@@ -12,21 +12,26 @@ static void printCPUCacheNormal(const FFCPUCacheResult* result, FFCPUCacheOption
     FF_STRBUF_AUTO_DESTROY buffer = ffStrbufCreate();
     FF_STRBUF_AUTO_DESTROY key = ffStrbufCreate();
 
+    char levelStr[4] = "L";
     for (uint32_t i = 0; i < sizeof (result->caches) / sizeof (result->caches[0]) && result->caches[i].length > 0; i++)
     {
         ffStrbufClear(&key);
+        levelStr[1] = (char) ('1' + i);
         if (options->moduleArgs.key.length == 0)
-            ffStrbufAppendF(&key, "%s (L%u)", FF_CPUCACHE_DISPLAY_NAME, i + 1);
+            ffStrbufAppendF(&key, "%s (%s)", FF_CPUCACHE_DISPLAY_NAME, levelStr);
         else
         {
-            FF_PARSE_FORMAT_STRING_CHECKED(&key, &options->moduleArgs.key, 1, ((FFformatarg[]){
-                {FF_FORMAT_ARG_TYPE_UINT, &i, "index"},
+            uint32_t index = i + 1;
+            FF_PARSE_FORMAT_STRING_CHECKED(&key, &options->moduleArgs.key, 3, ((FFformatarg[]){
+                {FF_FORMAT_ARG_TYPE_UINT, &index, "index"},
+                {FF_FORMAT_ARG_TYPE_STRING, levelStr, "level"},
+                {FF_FORMAT_ARG_TYPE_STRBUF, &options->moduleArgs.keyIcon, "icon"},
             }));
         }
 
         ffStrbufClear(&buffer);
 
-        uint64_t sum = 0;
+        uint32_t sum = 0;
         FF_LIST_FOR_EACH(FFCPUCache, src, result->caches[i])
         {
             char typeStr = '?';
@@ -44,19 +49,19 @@ static void printCPUCacheNormal(const FFCPUCacheResult* result, FFCPUCacheOption
             ffParseSize(src->size, &buffer);
             ffStrbufAppendF(&buffer, " (%c)", typeStr);
 
-            sum += (uint64_t) src->size * src->num;
+            sum += src->size * src->num;
         }
 
         if(options->moduleArgs.outputFormat.length == 0)
         {
-            ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
+            ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY);
             ffStrbufPutTo(&buffer, stdout);
         }
         else
         {
             FF_STRBUF_AUTO_DESTROY buffer2 = ffStrbufCreate();
             ffParseSize(sum, &buffer2);
-            FF_PRINT_FORMAT_CHECKED(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, FF_CPUCACHE_NUM_FORMAT_ARGS, ((FFformatarg[]) {
+            FF_PRINT_FORMAT_CHECKED(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY, FF_CPUCACHE_NUM_FORMAT_ARGS, ((FFformatarg[]) {
                 {FF_FORMAT_ARG_TYPE_STRBUF, &buffer, "result"},
                 {FF_FORMAT_ARG_TYPE_STRBUF, &buffer2, "sum"},
             }));
@@ -74,7 +79,7 @@ static void printCPUCacheCompact(const FFCPUCacheResult* result, FFCPUCacheOptio
             ffStrbufAppendS(&buffer, ", ");
         uint32_t value = 0;
         FF_LIST_FOR_EACH(FFCPUCache, src, result->caches[i])
-            value += (uint64_t) src->size * src->num;
+            value += src->size * src->num;
         ffParseSize(value, &buffer);
         ffStrbufAppendF(&buffer, " (L%u)", i + 1);
         sum += value;
@@ -244,7 +249,7 @@ void ffInitCPUCacheOptions(FFCPUCacheOptions* options)
         ffPrintCPUCacheHelpFormat,
         ffGenerateCPUCacheJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "");
 
     options->compact = false;
 }

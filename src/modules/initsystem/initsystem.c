@@ -29,7 +29,7 @@ void ffPrintInitSystem(FFInitSystemOptions* options)
         ffPrintLogoAndKey(FF_INITSYSTEM_DISPLAY_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
         ffStrbufWriteTo(&result.name, stdout);
         if (result.version.length)
-            printf(" (%s)\n", result.version.chars);
+            printf(" %s\n", result.version.chars);
         else
             putchar('\n');
     }
@@ -136,7 +136,7 @@ void ffInitInitSystemOptions(FFInitSystemOptions* options)
         ffPrintInitSystemHelpFormat,
         ffGenerateInitSystemJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "󰿄");
 }
 
 void ffDestroyInitSystemOptions(FFInitSystemOptions* options)

@@ -53,7 +53,6 @@ static uint32_t getShellInfo(FFShellResult* result, uint32_t pid)
         if(
             ffStrbufIgnCaseEqualS(&result->prettyName, "sudo")          ||
             ffStrbufIgnCaseEqualS(&result->prettyName, "su")            ||
-            ffStrbufIgnCaseEqualS(&result->prettyName, "sshd")          ||
             ffStrbufIgnCaseEqualS(&result->prettyName, "gdb")           ||
             ffStrbufIgnCaseEqualS(&result->prettyName, "lldb")          ||
             ffStrbufIgnCaseEqualS(&result->prettyName, "python")        || // python on windows generates shim executables
@@ -99,21 +98,24 @@ static void setShellInfoDetails(FFShellResult* result)
     {
         ffStrbufSetS(&result->prettyName, "CMD");
 
-        FF_AUTO_CLOSE_FD HANDLE snapshot = NULL;
-        while(!(snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, result->pid)) && GetLastError() == ERROR_BAD_LENGTH) {}
-
-        if(snapshot)
+        if (instance.config.general.detectVersion)
         {
-            MODULEENTRY32W module;
-            module.dwSize = sizeof(module);
-            for(BOOL success = Module32FirstW(snapshot, &module); success; success = Module32NextW(snapshot, &module))
+            FF_AUTO_CLOSE_FD HANDLE snapshot = NULL;
+            while(!(snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, result->pid)) && GetLastError() == ERROR_BAD_LENGTH) {}
+
+            if(snapshot)
             {
-                if(wcsncmp(module.szModule, L"clink_dll_", strlen("clink_dll_")) == 0)
+                MODULEENTRY32W module;
+                module.dwSize = sizeof(module);
+                for(BOOL success = Module32FirstW(snapshot, &module); success; success = Module32NextW(snapshot, &module))
                 {
-                    ffStrbufAppendS(&result->prettyName, " (with Clink ");
-                    getProductVersion(module.szExePath, &result->prettyName);
-                    ffStrbufAppendC(&result->prettyName, ')');
-                    break;
+                    if(wcsncmp(module.szModule, L"clink_dll_", strlen("clink_dll_")) == 0)
+                    {
+                        ffStrbufAppendS(&result->prettyName, " (with Clink ");
+                        getProductVersion(module.szExePath, &result->prettyName);
+                        ffStrbufAppendC(&result->prettyName, ')');
+                        break;
+                    }
                 }
             }
         }
@@ -152,7 +154,7 @@ static bool getTerminalFromEnv(FFTerminalResult* result)
     }
 
     //SSH
-    if(getenv("SSH_CONNECTION") != NULL)
+    if(getenv("SSH_TTY") != NULL)
         term = getenv("SSH_TTY");
 
     //Windows Terminal
@@ -312,6 +314,11 @@ static void setTerminalInfoDetails(FFTerminalResult* result)
         ffStrbufSetStatic(&result->prettyName, "Windows Explorer");
     else if(ffStrbufEqualS(&result->prettyName, "wezterm-gui"))
         ffStrbufSetStatic(&result->prettyName, "WezTerm");
+    else if(ffStrbufIgnCaseEqualS(&result->prettyName, "sshd") || ffStrbufStartsWithIgnCaseS(&result->prettyName, "sshd-"))
+    {
+        const char* tty = getenv("SSH_TTY");
+        if (tty) ffStrbufSetS(&result->prettyName, tty);
+    }
 }
 
 bool fftsGetTerminalVersion(FFstrbuf* processName, FFstrbuf* exe, FFstrbuf* version);

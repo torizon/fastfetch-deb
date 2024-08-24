@@ -83,12 +83,12 @@ __fastfetch_complete_logo_type()
 
 __fastfetch_complete_binary_prefix()
 {
-    local __ff_binary_prefixes=(
+    local __ff_size_binary_prefixes=(
         "iec"
         "si"
         "jedec"
     )
-    COMPREPLY=($(compgen -W "${__ff_binary_prefixes[*]}" -- "$CURRENT_WORD"))
+    COMPREPLY=($(compgen -W "${__ff_size_binary_prefixes[*]}" -- "$CURRENT_WORD"))
 }
 
 __fastfetch_complete_gl()
@@ -347,6 +347,7 @@ __fastfetch_completion()
         "--users-key"
         "--users-format"
         "--users-key-color"
+        "--users-myself-only"
         "--bluetooth-key"
         "--bluetooth-format"
         "--bluetooth-key-color"
@@ -355,7 +356,6 @@ __fastfetch_completion()
     local FF_OPTIONS_PATH=(
         "-c"
         "--config"
-        "--lib-pci"
         "--lib-vulkan"
         "--lib-wayland"
         "--lib-xcb-randr"

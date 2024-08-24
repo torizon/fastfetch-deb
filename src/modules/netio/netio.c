@@ -25,9 +25,10 @@ static void formatKey(const FFNetIOOptions* options, FFNetIOResult* inf, uint32_
     else
     {
         ffStrbufClear(key);
-        FF_PARSE_FORMAT_STRING_CHECKED(key, &options->moduleArgs.key, 2, ((FFformatarg[]){
+        FF_PARSE_FORMAT_STRING_CHECKED(key, &options->moduleArgs.key, 3, ((FFformatarg[]){
             {FF_FORMAT_ARG_TYPE_UINT, &index, "index"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &inf->name, "name"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &options->moduleArgs.keyIcon, "icon"},
         }));
     }
 }
@@ -57,7 +58,7 @@ void ffPrintNetIO(FFNetIOOptions* options)
 
         if(options->moduleArgs.outputFormat.length == 0)
         {
-            ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
+            ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY);
 
             ffParseSize(inf->rxBytes, &buffer);
             if (!options->detectTotal) ffStrbufAppendS(&buffer, "/s");
@@ -247,7 +248,7 @@ void ffInitNetIOOptions(FFNetIOOptions* options)
         ffPrintNetIOHelpFormat,
         ffGenerateNetIOJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "󰾆");
 
     ffStrbufInit(&options->namePrefix);
     options->defaultRouteOnly =

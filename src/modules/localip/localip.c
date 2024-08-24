@@ -5,7 +5,7 @@
 #include "util/stringUtils.h"
 
 #define FF_LOCALIP_DISPLAY_NAME "Local IP"
-#define FF_LOCALIP_NUM_FORMAT_ARGS 5
+#define FF_LOCALIP_NUM_FORMAT_ARGS 6
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 
 static int sortIps(const FFLocalIpResult* left, const FFLocalIpResult* right)
@@ -25,10 +25,11 @@ static void formatKey(const FFLocalIpOptions* options, FFLocalIpResult* ip, uint
     else
     {
         ffStrbufClear(key);
-        FF_PARSE_FORMAT_STRING_CHECKED(key, &options->moduleArgs.key, 3, ((FFformatarg[]){
+        FF_PARSE_FORMAT_STRING_CHECKED(key, &options->moduleArgs.key, 4, ((FFformatarg[]){
             {FF_FORMAT_ARG_TYPE_UINT, &index, "index"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &ip->name, "name"},
             {FF_FORMAT_ARG_TYPE_STRBUF, &ip->mac, "mac"},
+            {FF_FORMAT_ARG_TYPE_STRBUF, &options->moduleArgs.keyIcon, "icon"},
         }));
     }
 }
@@ -105,7 +106,7 @@ void ffPrintLocalIp(FFLocalIpOptions* options)
             if(options->moduleArgs.outputFormat.length == 0)
             {
                 ffPrintLogoAndKey(key.chars, 0, &options->moduleArgs, FF_PRINT_TYPE_NO_CUSTOM_KEY);
-                printIp(ip, true);
+                printIp(ip, !(options->showType & FF_LOCALIP_TYPE_DEFAULT_ROUTE_ONLY_BIT));
                 putchar('\n');
             }
             else
@@ -116,6 +117,7 @@ void ffPrintLocalIp(FFLocalIpOptions* options)
                     {FF_FORMAT_ARG_TYPE_STRBUF, &ip->mac, "mac"},
                     {FF_FORMAT_ARG_TYPE_STRBUF, &ip->name, "ifname"},
                     {FF_FORMAT_ARG_TYPE_BOOL, &ip->defaultRoute, "is-default-route"},
+                    {FF_FORMAT_ARG_TYPE_INT, &ip->mtu, "mtu"},
                 }));
             }
             ++index;
@@ -373,6 +375,7 @@ void ffGenerateLocalIpJsonResult(FF_MAYBE_UNUSED FFLocalIpOptions* options, yyjs
         yyjson_mut_obj_add_strbuf(doc, obj, "ipv6", &ip->ipv6);
         yyjson_mut_obj_add_strbuf(doc, obj, "mac", &ip->mac);
         yyjson_mut_obj_add_strbuf(doc, obj, "name", &ip->name);
+        yyjson_mut_obj_add_int(doc, obj, "mtu", ip->mtu);
     }
 
     FF_LIST_FOR_EACH(FFLocalIpResult, ip, results)
@@ -391,7 +394,8 @@ void ffPrintLocalIpHelpFormat(void)
         "Local IPv6 address - ipv6",
         "Physical (MAC) address - mac",
         "Interface name - ifname",
-        "Is default route - is-default-route"
+        "Is default route - is-default-route",
+        "MTU size in bytes - mtu",
     }));
 }
 
@@ -408,7 +412,7 @@ void ffInitLocalIpOptions(FFLocalIpOptions* options)
         ffPrintLocalIpHelpFormat,
         ffGenerateLocalIpJsonConfig
     );
-    ffOptionInitModuleArg(&options->moduleArgs);
+    ffOptionInitModuleArg(&options->moduleArgs, "󰩟");
 
     options->showType = FF_LOCALIP_TYPE_IPV4_BIT | FF_LOCALIP_TYPE_PREFIX_LEN_BIT
         #ifndef __ANDROID__

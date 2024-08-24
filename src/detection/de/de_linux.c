@@ -74,7 +74,20 @@ static void getGnome(FFstrbuf* result, FF_MAYBE_UNUSED FFDEOptions* options)
 
 static void getCinnamon(FFstrbuf* result, FF_MAYBE_UNUSED FFDEOptions* options)
 {
-    ffParsePropFileData("applications/cinnamon.desktop", "X-GNOME-Bugzilla-Version =", result);
+    ffStrbufSetS(result, getenv("CINNAMON_VERSION"));
+
+    if (result->length == 0)
+        ffParsePropFileData("applications/cinnamon.desktop", "X-GNOME-Bugzilla-Version =", result);
+
+    if (result->length == 0 && options->slowVersionDetection)
+    {
+        if (ffProcessAppendStdOut(result, (char* const[]){
+            "cinnamon",
+            "--version",
+            NULL
+        }) == NULL) // Cinnamon 6.2.2
+            ffStrbufSubstrAfterLastC(result, ' ');
+    }
 }
 
 static void getMate(FFstrbuf* result, FFDEOptions* options)
@@ -167,6 +180,8 @@ static void getBudgie(FFstrbuf* result, FF_MAYBE_UNUSED FFDEOptions* options)
 
 const char* ffDetectDEVersion(const FFstrbuf* deName, FFstrbuf* result, FFDEOptions* options)
 {
+    if (!instance.config.general.detectVersion) return "Disabled by config";
+
     if (ffStrbufEqualS(deName, FF_DE_PRETTY_PLASMA))
         getKDE(result, options);
     else if (ffStrbufEqualS(deName, FF_DE_PRETTY_GNOME))

@@ -75,10 +75,10 @@ const char* ffDetectPhysicalMemory(FFlist* result)
     if (!data)
         return "Memory device is not found in SMBIOS data";
 
-    for (; data->Header.Type == FF_SMBIOS_TYPE_MEMORY_DEVICE;
-           data = (const FFSmbiosMemoryDevice*) ffSmbiosNextEntry(&data->Header))
+    for (; data->Header.Type < FF_SMBIOS_TYPE_END_OF_TABLE;
+        data = (const FFSmbiosMemoryDevice*) ffSmbiosNextEntry(&data->Header))
     {
-        if (data->Size == 0) continue;
+        if (data->Header.Type != FF_SMBIOS_TYPE_MEMORY_DEVICE || data->Size == 0) continue;
 
         const char* strings = (const char*) data + data->Header.Length;
 
@@ -100,11 +100,11 @@ const char* ffDetectPhysicalMemory(FFlist* result)
         if (data->Size != 0xFFFF)
         {
             if (data->Size == 0x7FFF)
-                device->size = (data->ExtendedSize & ~(1 << 31)) * 1024 * 1024;
+                device->size = (data->ExtendedSize & ~(1ULL << 31)) * 1024ULL * 1024ULL;
             else if (data->Size & (1 << 15))
             {
                 // in kB
-                device->size = (data->Size & ~(1u << 15)) * 1024ULL;
+                device->size = (data->Size & ~(1ULL << 15)) * 1024ULL;
             }
             else
             {
@@ -113,7 +113,15 @@ const char* ffDetectPhysicalMemory(FFlist* result)
             }
         }
 
-        ffStrbufSetF(&device->locator, "%s/%s", ffSmbiosLocateString(strings, data->BankLocator), ffSmbiosLocateString(strings, data->DeviceLocator));
+        // https://github.com/fastfetch-cli/fastfetch/issues/1051#issuecomment-2206687345
+        const char* lbank = ffSmbiosLocateString(strings, data->BankLocator);
+        const char* ldevice = ffSmbiosLocateString(strings, data->DeviceLocator);
+        if (lbank && ldevice)
+            ffStrbufSetF(&device->locator, "%s/%s", lbank, ldevice);
+        else if (lbank)
+            ffStrbufSetS(&device->locator, lbank);
+        else if (ldevice)
+            ffStrbufSetS(&device->locator, ldevice);
 
         switch (data->FormFactor)
         {
