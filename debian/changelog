@@ -1,3 +1,9 @@
+fastfetch (2.21.3+dfsg-1) unstable; urgency=medium
+
+  * New upstream version 2.21.3+dfsg
+
+ -- Maytham Alsudany <maytha8thedev@gmail.com>  Sat, 24 Aug 2024 12:20:59 +0800
+
 fastfetch (2.15.0+dfsg-2) unstable; urgency=medium
 
   * Source only upload.
