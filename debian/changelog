@@ -1,3 +1,11 @@
+fastfetch (2.21.3+dfsg-1~toradex1) bookworm; urgency=medium
+
+  * debian/gbp.conf: customize for toradex
+  * debian/source/options: make dpkg-source ignore our added github workflow
+  * github: workflows: add deb-builder.yml and remove ci.yml
+
+ -- Carlos Henrique Lima Melara <carlos.melara@toradex.com>  Mon, 07 Oct 2024 18:23:28 -0300
+
 fastfetch (2.21.3+dfsg-1) unstable; urgency=medium
 
   * New upstream version 2.21.3+dfsg
