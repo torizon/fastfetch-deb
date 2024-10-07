@@ -1,0 +1,2 @@
+# ignore github workflows modifications added by us outside debian/ directory
+extend-diff-ignore = '.github/workflows/'
